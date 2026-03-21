@@ -1,0 +1,262 @@
+@import "./crt.scss";
+
+@font-face {
+  font-family: 'ms_sans_serif';
+  src: url('/fonts/ms_sans_serif.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal
+}
+@font-face {
+  font-family: 'ms_sans_serif';
+  src: url('/fonts/ms_sans_serif_bold.woff2') format('woff2');
+  font-weight: bold;
+  font-style: normal
+}
+
+body, html, input, select, textarea {
+  font-family: 'ms_sans_serif';
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0;
+  margin: 0;
+}
+
+body, html {
+  position: relative;
+}
+
+#main {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background-image: url('/static/images/bg.png');
+}
+
+.desktop-icons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 20px;
+  height: 100%;
+  width: 100%;
+}
+
+.icon-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 80px;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px;
+  border-radius: 2px;
+}
+
+.icon-item.selected {
+  background: rgba(0, 0, 170, 0.1);
+}
+
+.icon-item img {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 4px;
+}
+
+.icon-item span {
+  font-size: 11px;
+  text-align: center;
+  color: white;
+  text-shadow: 1px 1px 0px black;
+  padding: 1px 2px;
+}
+
+.icon-item.selected span {
+  background-color: #0000aa;
+  border: thin dotted white;
+  color: white;
+  text-shadow: none;
+}
+
+// Application Window Styles
+.application-window {
+  display: flex;
+  flex-direction: column;
+  background-color: #c0c0c0;
+  border: 2px solid;
+  border-color: #dfdfdf #808080 #808080 #dfdfdf;
+  box-shadow: 1px 1px 0 #000000;
+  font-family: 'ms_sans_serif';
+  font-size: 11px;
+}
+
+.window-title-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(to right, #000080, /*#1084d7*/ #000080);
+  color: white;
+  padding: 1px;
+  height: 24px;
+  cursor: move;
+  flex-shrink: 0;
+}
+
+.window-title-bar.unfocused {
+  background: linear-gradient(to right, #808080, #a0a0a0);
+}
+
+.title-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  margin-left: 3px;
+}
+
+.window-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 1px;
+}
+
+.title-bar-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.title-bar-buttons {
+  display: flex;
+  gap: 5px;
+  margin-right: 5px;
+}
+
+.window-button {
+  position: relative;
+  background-color: #d4d0c8;
+  border: 1px solid #ffffff;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  border-right-color: #808080;
+  border-bottom-color: #808080;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  box-sizing: border-box;
+}
+
+.window-button:active {
+  border-top-color: #808080;
+  border-left-color: #808080;
+  border-right-color: #ffffff;
+  border-bottom-color: #ffffff;
+}
+
+.window-button:hover {
+  background-color: #e8e4db;
+}
+
+.close-button:active {
+  color: white;
+}
+
+.window-content {
+  flex: 1;
+  overflow: auto;
+  background-color: #c0c0c0;
+  padding: 2px;
+}
+
+.app-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.window-button.minimize::before {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 2.5px;
+  background-color: #000;
+  top: 10px;
+  left: 3.5px;
+}
+
+.window-button.maximize::before {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  top: 4px;
+  left: 4px;
+  border: 1px solid #000;
+  background-color: #000;
+  box-sizing: border-box;
+}
+
+.window-button.maximize::after {
+  content: '';
+  position: absolute;
+  width: 7px;
+  height: 6px;
+  top: 6.2px;
+  left: 5.2px;
+  border: 1px solid #000;
+  background-color: #e8e4db;
+  box-sizing: border-box;
+}
+
+.window-button.close-button::before,
+.window-button.close-button::after {
+  content: '';
+  position: absolute;
+  width: 13px;
+  height: 2px;
+  background-color: #000;
+  top: 7px;
+  left: 1.45px;
+}
+
+.window-button.close-button::before {
+  transform: rotate(45deg);
+}
+
+.window-button.close-button::after {
+  transform: rotate(-45deg);
+}
+
+
+.notepad-textarea {
+  width: 100%;
+  height: 100%;
+  border: 1px solid;
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+  padding: 2px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  resize: none;
+  background-color: white;
+  color: black;
+  font-weight:bolder;
+}
+
+.window-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+  background: linear-gradient(135deg, transparent 50%, #808080 50%);
+}
