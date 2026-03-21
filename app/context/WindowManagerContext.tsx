@@ -1,4 +1,5 @@
 import React, { createContext, useReducer, ReactNode } from 'react';
+import { getAppById, DEFAULT_WINDOW_SIZE } from '../applications/index';
 
 export interface AppWindow {
   id: string;
@@ -10,6 +11,7 @@ export interface AppWindow {
   size: { width: number; height: number };
   zIndex: number;
   focused: boolean;
+  props?: Record<string, unknown>;
 }
 
 interface WindowManagerState {
@@ -19,7 +21,7 @@ interface WindowManagerState {
 
 export interface WindowManagerContextType {
   state: WindowManagerState;
-  openWindow: (appId: string, title: string, defaultSize?: { width: number; height: number }) => void;
+  openWindow: (appId: string, options?: { title?: string; props?: Record<string, unknown> }) => void;
   closeWindow: (id: string) => void;
   toggleMinimize: (id: string) => void;
   toggleMaximize: (id: string) => void;
@@ -30,7 +32,7 @@ export interface WindowManagerContextType {
 }
 
 type Action =
-  | { type: 'OPEN_WINDOW'; payload: { appId: string; title: string; defaultSize?: { width: number; height: number } } }
+  | { type: 'OPEN_WINDOW'; payload: { appId: string; title?: string; props?: Record<string, unknown> } }
   | { type: 'CLOSE_WINDOW'; payload: string }
   | { type: 'TOGGLE_MINIMIZE'; payload: string }
   | { type: 'TOGGLE_MAXIMIZE'; payload: string }
@@ -51,14 +53,16 @@ function generateId(): string {
 function windowReducer(state: WindowManagerState, action: Action): WindowManagerState {
   switch (action.type) {
     case 'OPEN_WINDOW': {
+      const app = getAppById(action.payload.appId);
       const newWindow: AppWindow = {
         id: generateId(),
         appId: action.payload.appId,
-        title: action.payload.title,
+        title: action.payload.title ?? app?.name ?? action.payload.appId,
+        props: action.payload.props,
         isMinimized: false,
         isMaximized: false,
         position: { x: 50 + state.windows.length * 30, y: 50 + state.windows.length * 30 },
-        size: action.payload.defaultSize || { width: 400, height: 300 },
+        size: DEFAULT_WINDOW_SIZE,
         zIndex: state.nextZIndex,
         focused: true,
       };
@@ -139,8 +143,8 @@ export const WindowManagerContext = createContext<WindowManagerContextType | und
 export function WindowManagerProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(windowReducer, initialState);
 
-  const openWindow = (appId: string, title: string, defaultSize?: { width: number; height: number }) => {
-    dispatch({ type: 'OPEN_WINDOW', payload: { appId, title, defaultSize } });
+  const openWindow = (appId: string, options?: { title?: string; props?: Record<string, unknown> }) => {
+    dispatch({ type: 'OPEN_WINDOW', payload: { appId, ...options } });
   };
 
   const closeWindow = (id: string) => {

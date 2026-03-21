@@ -21,14 +21,7 @@ export default function Notepad({ windowId, focusWindow, defaultContent }: Notep
 
   return (
     <div className="app-content" onClick={(e) => { e.stopPropagation(); focusWindow(windowId); }}>
-      <textarea
-        id={windowId}
-        className="notepad-textarea"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onClick={(e) => { e.stopPropagation(); focusWindow(windowId); }}
-        placeholder=""
-      />
+      
     </div>
   );
 }

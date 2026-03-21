@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ethan95
+
+A Windows 95-inspired portfolio website built with Next.js. It simulates a classic desktop environment complete with draggable windows, a taskbar, desktop icons, and built-in apps — including a photo gallery that streams from Google Photos shared albums.
+
+## Features
+
+- **Window management** — drag, resize, minimize, maximize, and close windows
+- **CRT monitor effect** — animated turn-on/turn-off with scanline overlay
+- **Built-in apps**
+  - Notepad
+  - My Computer
+  - My Documents
+  - Photos (Google Photos integration)
+  - Recycle Bin
+- **Photo gallery** — streams shared Google Photos albums with pagination and lazy loading
+- **Classic Windows 95 UI** — authentic styling via [React95](https://github.com/React95/React95)
+
+## Tech Stack
+
+- [Next.js](https://nextjs.org/) 16 (App Router)
+- [React](https://react.dev/) 18
+- [React95](https://github.com/React95/React95) — Windows 95 component library
+- [styled-components](https://styled-components.com/)
+- SCSS
+- TypeScript
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Google Photos Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Albums are configured in `public/data/albums.json` as a list of Google Photos shared album URLs:
 
-## Learn More
+```json
+[
+  "https://photos.app.goo.gl/..."
+]
+```
 
-To learn more about Next.js, take a look at the following resources:
+At build time, `scripts/scrape-albums.mjs` fetches and caches album metadata to `public/data/albums-cache.json`. At runtime, a fallback cache with a 1-hour TTL is used if the build cache is unavailable.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To pre-build the album cache manually:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+node scripts/scrape-albums.mjs
+```
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+app/
+  applications/   # App components (Notepad, Photos, etc.)
+  components/     # Desktop, ApplicationWindow, FileSystem, TaskBar
+  context/        # WindowManagerContext (window state via useReducer)
+  api/photos/     # SSE endpoint for streaming album data
+public/
+  data/           # albums.json config + albums-cache.json
+  static/icons/   # Windows 95 icon set
+  fonts/          # MS Sans Serif
+scripts/
+  scrape-albums.mjs  # Build-time album scraper
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT

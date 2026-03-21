@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# generated album cache (build artifact)
+public/data/albums-cache.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

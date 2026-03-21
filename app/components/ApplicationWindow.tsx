@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useWindowManager } from '../hooks/useWindowManager';
 import { AppWindow } from '../context/WindowManagerContext';
-import { RegisteredApp } from '../applications/index';
+import { RegisteredApp, DEFAULT_MIN_SIZE } from '../applications/index';
 import Image from 'next/image';
 
 interface ApplicationWindowProps {
@@ -55,8 +55,8 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
       } else if (isResizing) {
         const deltaX = e.clientX - resizeStart.x;
         const deltaY = e.clientY - resizeStart.y;
-        const newWidth = Math.max(resizeStart.width + deltaX, app.minSize?.width || 300);
-        const newHeight = Math.max(resizeStart.height + deltaY, app.minSize?.height || 200);
+        const newWidth = Math.max(resizeStart.width + deltaX, DEFAULT_MIN_SIZE.width);
+        const newHeight = Math.max(resizeStart.height + deltaY, DEFAULT_MIN_SIZE.height);
         setSize(windowData.id, newWidth, newHeight);
       }
     };
@@ -74,7 +74,7 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, isResizing, dragOffset, resizeStart, windowData.id, setPosition, setSize, app.minSize]);
+  }, [isDragging, isResizing, dragOffset, resizeStart, windowData.id, setPosition, setSize]);
 
   if (windowData.isMinimized) {
     return null;
@@ -134,7 +134,7 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
 
       {/* Content Area */}
       <div className="window-content" onClick={(e) => { e.stopPropagation(); focusWindow(windowData.id); }}>
-        <AppContent windowId={windowData.id} focusWindow={focusWindow} />
+        <AppContent windowId={windowData.id} focusWindow={focusWindow} {...(windowData.props ?? {})} />
       </div>
 
       {/* Resize Handle (bottom-right corner) */}
