@@ -11,8 +11,21 @@ interface ApplicationWindowProps {
   app: RegisteredApp;
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function ApplicationWindow({ windowData, app }: ApplicationWindowProps) {
   const { focusWindow, setPosition, setSize, toggleMinimize, toggleMaximize, closeWindow } = useWindowManager();
+  const isMobile = useIsMobile();
   const windowRef = useRef<HTMLDivElement>(null);
   const titleBarRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -20,10 +33,11 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
-  // Handle title bar dragging
+  // Handle title bar dragging (desktop only)
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isMobile) return;
     if ((e.target as HTMLElement).closest('[data-no-drag]')) return;
-    
+
     focusWindow(windowData.id);
     setIsDragging(true);
     setDragOffset({
@@ -32,8 +46,9 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
     });
   };
 
-  // Handle window resizing
+  // Handle window resizing (desktop only)
   const handleResizeStart = (e: React.MouseEvent) => {
+    if (isMobile) return;
     focusWindow(windowData.id);
     setIsResizing(true);
     setResizeStart({
@@ -83,7 +98,8 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
   const AppContent = app.component;
   const isMaximized = windowData.isMaximized;
 
-  const windowStyle: React.CSSProperties = isMaximized
+  // On mobile: always fullscreen (no dragging/positioning)
+  const windowStyle: React.CSSProperties = isMobile || isMaximized
     ? {
         position: 'fixed',
         top: 0,
@@ -119,11 +135,13 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
             onClick={(e) => { e.stopPropagation(); toggleMinimize(windowData.id); }}
             title="Minimize"
           />
-          <button
-            className="window-button maximize"
-            onClick={(e) => { e.stopPropagation(); toggleMaximize(windowData.id); }}
-            title="Maximize"
-          />
+          {!isMobile && (
+            <button
+              className="window-button maximize"
+              onClick={(e) => { e.stopPropagation(); toggleMaximize(windowData.id); }}
+              title="Maximize"
+            />
+          )}
           <button
             className="window-button close-button"
             onClick={(e) => { e.stopPropagation(); closeWindow(windowData.id); }}
@@ -137,8 +155,8 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
         <AppContent windowId={windowData.id} focusWindow={focusWindow} {...(windowData.props ?? {})} />
       </div>
 
-      {/* Resize Handle (bottom-right corner) */}
-      {!isMaximized && (
+      {/* Resize Handle (bottom-right corner, desktop only) */}
+      {!isMaximized && !isMobile && (
         <div
           className="window-resize-handle"
           onMouseDown={handleResizeStart}
