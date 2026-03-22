@@ -6,6 +6,8 @@ import RecycleBin from './RecycleBin';
 import MyDocuments from './MyDocuments';
 import Photos from './Photos';
 import PhotoViewer from './PhotoViewer';
+import DocumentViewer from './DocumentViewer';
+import InternetExplorer from './InternetExplorer';
 
 export const DEFAULT_WINDOW_SIZE = { width: 500, height: 400 };
 export const DEFAULT_MIN_SIZE = { width: 300, height: 200 };
@@ -33,13 +35,13 @@ export const APPLICATIONS: RegisteredApp[] = [
   {
     id: 'recyclebin',
     name: 'Recycle Bin',
-    icon: Icons.RECYCLE_BIN_EMPTY,
+    icon: Icons.RECYCLE_BIN_FULL_COOL,
     component: RecycleBin,
   },
   {
     id: 'mydocuments',
     name: 'My Documents',
-    icon: Icons.DIRECTORY_CLOSED,
+    icon: Icons.DIRECTORY_OPEN_FILE_MYDOCS,
     component: MyDocuments,
   },
   {
@@ -53,6 +55,18 @@ export const APPLICATIONS: RegisteredApp[] = [
     name: 'Photo Viewer',
     icon: Icons.IMAGE_OLD_JPEG,
     component: PhotoViewer,
+  },
+  {
+    id: 'documentviewer',
+    name: 'Document Viewer',
+    icon: Icons.DOCUMENT,
+    component: DocumentViewer,
+  },
+  {
+    id: 'internet-explorer',
+    name: 'Internet Explorer',
+    icon: Icons.MSIE2,
+    component: InternetExplorer,
   },
 ];
 

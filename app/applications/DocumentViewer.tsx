@@ -9,19 +9,19 @@ interface NotepadProps {
 }
 
 export default function Notepad({ windowId, focusWindow, defaultContent }: NotepadProps) {
-  const [text, setText] = useState<string>('');
+  const [documentContent, setDocumentContent] = useState<string>('');
 
   useEffect(() => {
     document.getElementById(windowId)?.focus();
 
     if(defaultContent) {
-      setText(defaultContent)
+      setDocumentContent(defaultContent)
     }
   }, [])
 
   return (
     <div className="app-content" onClick={(e) => { e.stopPropagation(); focusWindow(windowId); }}>
-      
+      <iframe src={documentContent ? `${documentContent}#toolbar=0` : undefined} width="100%" height="100%" style={{ border: 'none' }} />
     </div>
   );
 }

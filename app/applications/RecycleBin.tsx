@@ -16,7 +16,7 @@ export default function RecycleBin({ windowId, focusWindow }: RecycleBinProps) {
   const { openWindow, unfocusAll } = useWindowManager()
 
   const items: FileItem[] = [
-    { name: 'secret.txt', icon: FileIcons.DOCUMENT, type: 'file', size: '18 KB', modified: '1/5/2026', onOpen: () => openWindow('notepad', { props: { defaultContent: SECRET_CONTENT } }) },
+    { name: 'secret.txt', icon: FileIcons.DOCUMENT, type: 'file', size: '18 KB', modified: '1/5/2026', onOpen: () => openWindow('notepad', { title: 'secret.txt', props: { defaultContent: SECRET_CONTENT } }) },
   ];
 
   useEffect(() => {

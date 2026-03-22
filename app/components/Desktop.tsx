@@ -6,7 +6,7 @@ import ApplicationContainer from './ApplicationContainer'
 import { useWindowManager } from '../hooks/useWindowManager'
 import { APPLICATIONS, RegisteredApp } from '../applications/index'
 
-const TARGET_APPLICATIONS: string[] = ['mycomputer', 'recyclebin', 'mydocuments', 'notepad', 'photos']
+const TARGET_APPLICATIONS: string[] = ['mycomputer', 'recyclebin', 'mydocuments', 'notepad', 'internet-explorer']
 
 const Desktop = () => {
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
