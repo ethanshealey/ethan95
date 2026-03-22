@@ -1,4 +1,6 @@
 
+@use 'sass:color';
+
 $ease-out-quint:cubic-bezier(0.230, 1.000, 0.320, 1.000);
 $ease-in-quint:cubic-bezier(0.755, 0.050, 0.855, 0.060);
 $screen-background:#121010;
@@ -93,7 +95,7 @@ $screen-background:#121010;
     left:0;
     bottom:0;
     right:0;
-    background:linear-gradient(transparentize($screen-background,1) 50%, transparentize(darken($screen-background,10),0.75) 50%), linear-gradient(90deg,transparentize(#ff0000,0.94),transparentize(#00ff00,0.98),transparentize(#0000ff,0.94));
+    background:linear-gradient(color.adjust($screen-background,$alpha:-1) 50%, color.adjust(color.adjust($screen-background,$lightness:-10%),$alpha:-0.75) 50%), linear-gradient(90deg,color.adjust(#ff0000,$alpha:-0.94),color.adjust(#00ff00,$alpha:-0.98),color.adjust(#0000ff,$alpha:-0.94));
     z-index:2;
     background-size:100% 2px, 3px 100%;
     pointer-events:none;
