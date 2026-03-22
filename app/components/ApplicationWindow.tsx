@@ -126,16 +126,16 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
         onMouseDown={handleMouseDown}
       >
         <div className="title-bar-left">
-          <img src={app.icon} alt={app.name} className="window-icon" />
+          { app.icon === 'NONE' ? null : <img src={app.icon} alt={app.name} className="window-icon" /> }  
           <span className="title-bar-text">{windowData.title}</span>
         </div>
         <div className="title-bar-buttons" data-no-drag>
-          <button
+          { !(windowData.title === 'Welcome') && <button
             className="window-button minimize"
             onClick={(e) => { e.stopPropagation(); toggleMinimize(windowData.id); }}
             title="Minimize"
-          />
-          {!isMobile && (
+          /> }
+          {!isMobile && !(windowData.title === 'Welcome') && (
             <button
               className="window-button maximize"
               onClick={(e) => { e.stopPropagation(); toggleMaximize(windowData.id); }}
@@ -156,7 +156,7 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
       </div>
 
       {/* Resize Handle (bottom-right corner, desktop only) */}
-      {!isMaximized && !isMobile && (
+      {!isMaximized && !isMobile && !(windowData.title === 'Welcome') && (
         <div
           className="window-resize-handle"
           onMouseDown={handleResizeStart}

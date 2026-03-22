@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import TaskBar from './TaskBar'
 import ApplicationContainer from './ApplicationContainer'
 import { useWindowManager } from '../hooks/useWindowManager'
@@ -11,6 +11,10 @@ const TARGET_APPLICATIONS: string[] = ['mycomputer', 'recyclebin', 'mydocuments'
 const Desktop = () => {
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
   const { openWindow, unfocusAll } = useWindowManager()
+
+  useEffect(() => {
+    // openWindow('welcome', { props: { resizable: false, minimizable: false, maximizable: false } })
+  }, [])
 
   return (
     <div id="main" onClick={() => { setSelectedIcon(null); unfocusAll(); }}>

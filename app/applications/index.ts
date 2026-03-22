@@ -8,6 +8,8 @@ import Photos from './Photos';
 import PhotoViewer from './PhotoViewer';
 import DocumentViewer from './DocumentViewer';
 import InternetExplorer from './InternetExplorer';
+import MyProjects from './MyProjects';
+import Welcome from './Welcome';
 
 export const DEFAULT_WINDOW_SIZE = { width: 500, height: 400 };
 export const DEFAULT_MIN_SIZE = { width: 300, height: 200 };
@@ -20,6 +22,12 @@ export interface RegisteredApp {
 }
 
 export const APPLICATIONS: RegisteredApp[] = [
+  {
+    id: 'welcome',
+    name: 'Welcome',
+    icon: Icons.NONE,
+    component: Welcome,
+  },
   {
     id: 'notepad',
     name: 'Notepad',
@@ -47,7 +55,7 @@ export const APPLICATIONS: RegisteredApp[] = [
   {
     id: 'photos',
     name: 'My Pictures',
-    icon: Icons.DIRECTORY_PICTURES,
+    icon: Icons.PICTURES,
     component: Photos,
   },
   {
@@ -67,6 +75,12 @@ export const APPLICATIONS: RegisteredApp[] = [
     name: 'Internet Explorer',
     icon: Icons.MSIE2,
     component: InternetExplorer,
+  },
+  {
+    id: 'my-projects',
+    name: 'My Projects',
+    icon: Icons.DIRECTORY_CONTROL_PANEL,
+    component: MyProjects,
   },
 ];
 

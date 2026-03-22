@@ -1,4 +1,5 @@
 export const Icons = {
+  NONE: "NONE",
   ACCESIBILITY_WINDOW_ABC: "/static/icons/w98_accesibility_window_abc.ico",
   ACCESSIBILITY: "/static/icons/w98_accessibility.ico",
   ACCESSIBILITY_BIG_KEYS: "/static/icons/w98_accessibility_big_keys.ico",
