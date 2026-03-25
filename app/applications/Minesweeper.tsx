@@ -72,9 +72,10 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
 
     const startNewGame = () => {
         if (timerRef.current) clearInterval(timerRef.current);
-        const { grid: newGrid, revealed: newRevealed } = generateGrid(difficulty);
-        setGrid(newGrid);
-        setRevealed(newRevealed);
+        const width = GRID_COLS[difficulty];
+        const height = GRID_ROWS[difficulty];
+        setGrid(Array.from({ length: height }, () => Array(width).fill(0)));
+        setRevealed(Array.from({ length: height }, () => Array(width).fill(0)));
         setFlagCount(MINE_COUNTS[difficulty]);
         setTimer(0);
         setLostCell(null);
@@ -85,17 +86,24 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
 
     const onCellClick = (x: number, y: number) => {
         if (!grid.length || revealed[y][x] !== 0 || lostCell || won) return;
-        if (!gameStarted) setGameStarted(true);
 
-        if (grid[y][x] === -1) {
-            setRevealed(prev => grid.map((row, r) => row.map((_, c) => prev[r][c] === 2 ? 2 : 1)));
+        let currentGrid = grid;
+        if (!gameStarted) {
+            const { grid: newGrid } = generateGrid(difficulty, { r: y, c: x });
+            setGrid(newGrid);
+            currentGrid = newGrid;
+            setGameStarted(true);
+        }
+
+        if (currentGrid[y][x] === -1) {
+            setRevealed(prev => currentGrid.map((row, r) => row.map((_, c) => prev[r][c] === 2 ? 2 : 1)));
             setLostCell({ x, y });
             return;
         }
 
-        const newRevealed = floodReveal(x, y, grid, revealed);
+        const newRevealed = floodReveal(x, y, currentGrid, revealed);
         setRevealed(newRevealed);
-        if (checkWin(grid, newRevealed)) {
+        if (checkWin(currentGrid, newRevealed)) {
             setWon(true);
             openWindow('minesweeper-winner', { props: { time: timer, difficulty } });
         }

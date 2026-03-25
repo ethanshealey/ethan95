@@ -4,7 +4,7 @@ export const GRID_COLS: Record<Difficulty, number> = { beginner: 9, intermediate
 export const GRID_ROWS: Record<Difficulty, number> = { beginner: 9, intermediate: 16, expert: 16 };
 export const MINE_COUNTS: Record<Difficulty, number> = { beginner: 10, intermediate: 40, expert: 99 };
 
-export function generateGrid(difficulty: Difficulty): { grid: number[][], revealed: number[][] } {
+export function generateGrid(difficulty: Difficulty, safeCell?: { r: number, c: number }): { grid: number[][], revealed: number[][] } {
     const width = GRID_COLS[difficulty];
     const height = GRID_ROWS[difficulty];
     const mineCount = MINE_COUNTS[difficulty];
@@ -12,11 +12,14 @@ export function generateGrid(difficulty: Difficulty): { grid: number[][], reveal
     const grid: number[][] = Array.from({ length: height }, () => Array(width).fill(0));
     const revealed: number[][] = Array.from({ length: height }, () => Array(width).fill(0));
 
+    const isSafe = (r: number, c: number) =>
+        safeCell && Math.abs(r - safeCell.r) <= 1 && Math.abs(c - safeCell.c) <= 1;
+
     let placed = 0;
     while (placed < mineCount) {
         const r = Math.floor(Math.random() * height);
         const c = Math.floor(Math.random() * width);
-        if (grid[r][c] !== -1) {
+        if (grid[r][c] !== -1 && !isSafe(r, c)) {
             grid[r][c] = -1;
             placed++;
         }

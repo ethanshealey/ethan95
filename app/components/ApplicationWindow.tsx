@@ -163,7 +163,7 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
       </div>
 
       {/* Resize Handle (bottom-right corner, desktop only) */}
-      {!isMaximized && !isMobile && !(windowData.title === 'Welcome' || windowData.title === 'Minesweeper' || windowData.title === 'Minesweeper Winner') && (
+      {!isMaximized && !isMobile && !(windowData.title === 'Welcome' || windowData.title === 'Minesweeper' || windowData.title === 'Minesweeper Winner' || windowData.title === 'Minesweeper Records') && (
         <div
           className="window-resize-handle"
           onMouseDown={handleResizeStart}
