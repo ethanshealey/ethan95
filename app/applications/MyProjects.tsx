@@ -10,9 +10,6 @@ interface MyProjectsProps {
 }
 
 const items: FileItem[] = [
-  { name: '3½ Floppy (A:)', icon: Icons.FLOPPY_DRIVE_3_5, type: 'folder' },
-  { name: 'Local Disk (C:)', icon: Icons.HARD_DISK_DRIVE, type: 'folder' },
-  { name: 'CD-ROM (D:)', icon: Icons.CD_DRIVE, type: 'folder' },
 ];
 
 export default function MyProjects({ windowId, focusWindow }: MyProjectsProps) {

@@ -9,6 +9,8 @@ import { getAppById } from '../applications/index'
 
 const TaskBar = () => {
 
+  const { openWindow, unfocusAll } = useWindowManager()
+  
   const [open, setOpen] = useState<boolean>(false)
   const [time, setTime] = useState<string>('')
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -181,7 +183,7 @@ const TaskBar = () => {
                   </MenuListItem>
                   <MenuListItem
                     style={{ display: 'flex', justifyContent: 'start', cursor: 'pointer' }}
-                    onClick={() => { }}
+                    onClick={() => openWindow('programs')}
                   >
                     <Image
                       src={Icons.DIRECTORY_PROGRAM_GROUP}

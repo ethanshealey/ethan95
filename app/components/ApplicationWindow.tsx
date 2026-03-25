@@ -108,6 +108,13 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
         height: 'calc(100% - 50px)',
         zIndex: windowData.zIndex,
       }
+    : app.fitContent
+    ? {
+        position: 'fixed',
+        left: windowData.position.x,
+        top: windowData.position.y,
+        zIndex: windowData.zIndex,
+      }
     : {
         position: 'fixed',
         left: windowData.position.x,
@@ -135,7 +142,7 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
             onClick={(e) => { e.stopPropagation(); toggleMinimize(windowData.id); }}
             title="Minimize"
           /> }
-          {!isMobile && !(windowData.title === 'Welcome') && (
+          {!isMobile && !(windowData.title === 'Welcome' || windowData.title === 'Minesweeper' || windowData.title === 'Minesweeper Winner') && (
             <button
               className="window-button maximize"
               onClick={(e) => { e.stopPropagation(); toggleMaximize(windowData.id); }}
@@ -151,12 +158,12 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
       </div>
 
       {/* Content Area */}
-      <div className="window-content" onClick={(e) => { e.stopPropagation(); focusWindow(windowData.id); }}>
+      <div className="window-content" style={app.fitContent ? { flex: 'none' } : undefined} onClick={(e) => { e.stopPropagation(); focusWindow(windowData.id); }}>
         <AppContent windowId={windowData.id} focusWindow={focusWindow} {...(windowData.props ?? {})} />
       </div>
 
       {/* Resize Handle (bottom-right corner, desktop only) */}
-      {!isMaximized && !isMobile && !(windowData.title === 'Welcome') && (
+      {!isMaximized && !isMobile && !(windowData.title === 'Welcome' || windowData.title === 'Minesweeper' || windowData.title === 'Minesweeper Winner') && (
         <div
           className="window-resize-handle"
           onMouseDown={handleResizeStart}

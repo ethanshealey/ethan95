@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "dseg": "^0.46.0",
     "firebase": "^12.11.0",
     "next": "16.2.0",
     "react": "18.2.0",

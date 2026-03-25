@@ -10,6 +10,11 @@ import DocumentViewer from './DocumentViewer';
 import InternetExplorer from './InternetExplorer';
 import MyProjects from './MyProjects';
 import Welcome from './Welcome';
+import Programs from './Programs';
+import Games from './Games';
+import Minesweeper from './Minesweeper';
+import MinesweeperWinner from './MinesweeperWinner';
+import MinesweeperRecords from './MinesweeperRecords';
 
 export const DEFAULT_WINDOW_SIZE = { width: 500, height: 400 };
 export const DEFAULT_MIN_SIZE = { width: 300, height: 200 };
@@ -19,13 +24,14 @@ export interface RegisteredApp {
   name: string;
   icon: string;
   component: React.ComponentType<any>;
+  fitContent?: boolean;
 }
 
 export const APPLICATIONS: RegisteredApp[] = [
   {
     id: 'welcome',
     name: 'Welcome',
-    icon: Icons.NONE,
+    icon: Icons.CHM,
     component: Welcome,
   },
   {
@@ -81,6 +87,38 @@ export const APPLICATIONS: RegisteredApp[] = [
     name: 'My Projects',
     icon: Icons.DIRECTORY_CONTROL_PANEL,
     component: MyProjects,
+  },
+  {
+    id: 'programs',
+    name: 'Programs',
+    icon: Icons.DIRECTORY_PROGRAM_GROUP,
+    component: Programs,
+  },
+  {
+    id: 'games',
+    name: 'Games',
+    icon: Icons.DIRECTORY_PROGRAM_GROUP,
+    component: Games,
+  },
+  {
+    id: 'minesweeper',
+    name: 'Minesweeper',
+    icon: Icons.MINESWEEPER,
+    component: Minesweeper,
+  },
+  {
+    id: 'minesweeper-winner',
+    name: 'Minesweeper Winner',
+    icon: Icons.MINESWEEPER,
+    component: MinesweeperWinner,
+    fitContent: true,
+  },
+  {
+    id: 'minesweeper-records',
+    name: 'Minesweeper Records',
+    icon: Icons.MINESWEEPER,
+    component: MinesweeperRecords,
+    fitContent: true,
   },
 ];
 
