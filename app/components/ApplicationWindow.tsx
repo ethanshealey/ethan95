@@ -11,6 +11,10 @@ interface ApplicationWindowProps {
   app: RegisteredApp;
 }
 
+const MINIMIZE_EXCLUSION_LIST = ['Welcome'];
+const MAXIMIZE_EXCLUSION_LIST = ['Welcome', 'Minesweeper', 'Minesweeper Winner'];
+const RESIZE_EXCLUSION_LIST   = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Minesweeper Records'];
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -137,12 +141,12 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
           <span className="title-bar-text">{windowData.title}</span>
         </div>
         <div className="title-bar-buttons" data-no-drag>
-          { !(windowData.title === 'Welcome') && <button
+          { !MINIMIZE_EXCLUSION_LIST.includes(windowData.title) && <button
             className="window-button minimize"
             onClick={(e) => { e.stopPropagation(); toggleMinimize(windowData.id); }}
             title="Minimize"
           /> }
-          {!isMobile && !(windowData.title === 'Welcome' || windowData.title === 'Minesweeper' || windowData.title === 'Minesweeper Winner') && (
+          {!isMobile && !MAXIMIZE_EXCLUSION_LIST.includes(windowData.title) && (
             <button
               className="window-button maximize"
               onClick={(e) => { e.stopPropagation(); toggleMaximize(windowData.id); }}
@@ -163,7 +167,7 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
       </div>
 
       {/* Resize Handle (bottom-right corner, desktop only) */}
-      {!isMaximized && !isMobile && !(windowData.title === 'Welcome' || windowData.title === 'Minesweeper' || windowData.title === 'Minesweeper Winner' || windowData.title === 'Minesweeper Records') && (
+      {!isMaximized && !isMobile && !RESIZE_EXCLUSION_LIST.includes(windowData.title) && (
         <div
           className="window-resize-handle"
           onMouseDown={handleResizeStart}
