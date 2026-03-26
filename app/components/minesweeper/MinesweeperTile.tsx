@@ -43,9 +43,6 @@ const MinesweeperTile = (props: MinesweeperTileProps) => {
                     ? (props.gameOver && !props.isMine ? <img src={TILE_MINE_WRONG} /> : <img src={TILE_FLAG} />)
                     : ''
             }
-            {/* {props.isRevealed
-                ? (props.isMine ? '💣' : props.adjacentMines > 0 ? props.adjacentMines : '')
-                : props.isFlagged ? '🚩' : ''} */}
         </Button>
     )
 }

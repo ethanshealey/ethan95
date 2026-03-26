@@ -1,6 +1,6 @@
 # ethan95
 
-A Windows 95-inspired portfolio website built with Next.js. It simulates a classic desktop environment complete with draggable windows, a taskbar, desktop icons, and built-in apps — including a photo gallery that streams from Google Photos shared albums.
+A Windows 95-inspired portfolio website built with Next.js. It simulates a classic desktop environment complete with draggable windows, a taskbar, desktop icons, and built-in apps.
 
 ## Features
 
@@ -10,14 +10,14 @@ A Windows 95-inspired portfolio website built with Next.js. It simulates a class
   - Notepad
   - My Computer
   - My Documents
-  - My Projects
-  - Photos (Google Photos integration) + Photo Viewer
-  - Document Viewer
+  - Photos + Photo Viewer
   - Internet Explorer
   - Recycle Bin
   - Welcome screen
-- **Photo gallery** — streams shared Google Photos albums with pagination and lazy loading
-- **Firebase integration** — Firestore/Firebase backend via `lib/firebase.ts`
+  - Minesweeper
+- **Photo gallery** — streams Firestore-backed albums via SSE, with pagination and lazy loading
+- **Minesweeper** — Beginner / Intermediate / Expert, flagging, flood fill, safe first click (first tile and its neighbors are always mine-free), and a Firestore leaderboard sorted by best time
+- **Firebase integration** — Firestore backend via `lib/firebase.ts`
 - **Classic Windows 95 UI** — authentic styling via [React95](https://github.com/React95/React95)
 
 ## Tech Stack
@@ -39,42 +39,29 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Google Photos Setup
+A Firebase project with Firestore is required. Configure your credentials in the environment before running.
 
-Albums are configured in `public/data/albums.json` as a list of Google Photos shared album URLs:
+## API Routes
 
-```json
-[
-  "https://photos.app.goo.gl/..."
-]
-```
-
-At build time, `scripts/scrape-albums.mjs` fetches and caches album metadata to `public/data/albums-cache.json`. At runtime, a fallback cache with a 1-hour TTL is used if the build cache is unavailable.
-
-To pre-build the album cache manually:
-
-```bash
-node scripts/scrape-albums.mjs
-```
+- `GET /api/minesweeper` — Returns top scores per difficulty, sorted by time ascending
+- `PUT /api/minesweeper` — Submits a score `{ username, time, difficulty }`
+- `GET /api/photos` — Streams Firestore album data as Server-Sent Events
 
 ## Project Structure
 
 ```
 app/
-  applications/   # App components (Notepad, Photos, Internet Explorer, etc.)
-  components/     # Desktop, ApplicationWindow, FileSystem, TaskBar
+  applications/   # App components (Notepad, Photos, Minesweeper, Internet Explorer, etc.)
+  components/     # Desktop, ApplicationWindow, FileSystem, TaskBar, MinesweeperGrid
   context/        # WindowManagerContext (window state via useReducer)
   hooks/          # useWindowManager
   icons/          # Windows 95 icon set
-  api/photos/     # SSE endpoint for streaming album data
-  firebase.ts     # Firebase app init
+  api/            # minesweeper + photos API routes
 lib/
   firebase.ts     # Firebase client utilities
 public/
-  data/           # albums.json config + albums-cache.json
   fonts/          # MS Sans Serif
-scripts/
-  scrape-albums.mjs  # Build-time album scraper
+  static/         # Images and icons
 ```
 
 ## License
