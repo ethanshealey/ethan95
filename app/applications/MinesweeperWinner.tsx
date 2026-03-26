@@ -7,11 +7,12 @@ import { useWindowManager } from '../hooks/useWindowManager';
 interface MinesweeperWinnerProps {
   windowId: string;
   focusWindow: (id: string) => void;
-  time?: string;
+  time?: number;
   difficulty?: string;
+  token?: string;
 }
 
-export default function MinesweeperWinner({ windowId, focusWindow, time, difficulty }: MinesweeperWinnerProps) {
+export default function MinesweeperWinner({ windowId, focusWindow, time, difficulty, token }: MinesweeperWinnerProps) {
 
   const { closeWindow } = useWindowManager();
   
@@ -24,7 +25,7 @@ export default function MinesweeperWinner({ windowId, focusWindow, time, difficu
 
   const submit = async () => {
     console.log(time, difficulty)
-    if(!time?.toString()?.trim() || !difficulty?.trim()) {
+    if(!time || !difficulty?.trim() || !token) {
       alert('No cheating ;)')
       return
     }
@@ -33,7 +34,7 @@ export default function MinesweeperWinner({ windowId, focusWindow, time, difficu
     const res: Response = await fetch('/api/minesweeper', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: text, time, difficulty }),
+      body: JSON.stringify({ username: text, time, difficulty, token }),
     });
 
     const data = await res.json();

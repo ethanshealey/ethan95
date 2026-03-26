@@ -84,7 +84,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         setShowDifficultyMenu(false);
     };
 
-    const onCellClick = (x: number, y: number) => {
+    const onCellClick = async (x: number, y: number) => {
         if (!grid.length || revealed[y][x] !== 0 || lostCell || won) return;
 
         let currentGrid = grid;
@@ -105,7 +105,14 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         setRevealed(newRevealed);
         if (checkWin(currentGrid, newRevealed)) {
             setWon(true);
-            openWindow('minesweeper-winner', { props: { time: timer, difficulty } });
+            const winTime = timer;
+            const res = await fetch('/api/minesweeper/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ time: winTime, difficulty }),
+            });
+            const { token } = await res.json();
+            openWindow('minesweeper-winner', { props: { time: winTime, difficulty, token } });
         }
     };
 
