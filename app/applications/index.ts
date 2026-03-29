@@ -15,6 +15,8 @@ import Games from './Games';
 import Minesweeper from './Minesweeper';
 import MinesweeperWinner from './MinesweeperWinner';
 import MinesweeperRecords from './MinesweeperRecords';
+import Solitaire from './Solitaire';
+import Admin from './Admin';
 
 export const DEFAULT_WINDOW_SIZE = { width: 500, height: 400 };
 export const DEFAULT_MIN_SIZE = { width: 300, height: 200 };
@@ -119,6 +121,19 @@ export const APPLICATIONS: RegisteredApp[] = [
     icon: Icons.MINESWEEPER,
     component: MinesweeperRecords,
     fitContent: true,
+  },
+  {
+    id: 'solitaire',
+    name: 'Solitaire',
+    icon: Icons.GAME_SOLITAIRE,
+    component: Solitaire,
+    fitContent: true,
+  },
+  {
+    id: 'admin',
+    name: 'Admin',
+    icon: Icons.DIRECTORY_CONTROL_PANEL,
+    component: Admin,
   },
 ];
 

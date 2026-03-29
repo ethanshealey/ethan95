@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/ethan/Documents/projects/ethan95 -not -path */node_modules/* -not -path */.next/* -not -path */.cache/* -type d)"
+    ]
+  }
+}
