@@ -17,6 +17,7 @@ import MinesweeperWinner from './MinesweeperWinner';
 import MinesweeperRecords from './MinesweeperRecords';
 import Solitaire from './Solitaire';
 import Admin from './Admin';
+import Settings from './Settings';
 
 export const DEFAULT_WINDOW_SIZE = { width: 500, height: 400 };
 export const DEFAULT_MIN_SIZE = { width: 300, height: 200 };
@@ -134,6 +135,12 @@ export const APPLICATIONS: RegisteredApp[] = [
     name: 'Admin',
     icon: Icons.DIRECTORY_CONTROL_PANEL,
     component: Admin,
+  },
+  {
+    id: 'settings',
+    name: 'Settings',
+    icon: Icons.SETTINGS_GEAR_COOL,
+    component: Settings,
   },
 ];
 

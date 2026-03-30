@@ -171,7 +171,7 @@ const TaskBar = () => {
                   </MenuListItem>
                   <MenuListItem
                     style={{ display: 'flex', justifyContent: 'start', cursor: 'pointer' }}
-                    onClick={() => { }}
+                    onClick={() => { openWindow('settings'); setOpen(false); }}
                   >
                     <Image
                       src={Icons.SETTINGS_GEAR_COOL}

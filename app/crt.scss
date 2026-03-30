@@ -158,3 +158,26 @@ $screen-background:#121010;
   animation:overlay-anim 5s linear;
   animation-fill-mode:forwards;
 }
+
+// CRT disabled overrides
+.crt-container.no-crt{
+  background:transparent;
+
+  &::before,
+  &::after{
+    display:none;
+  }
+}
+#switch~.crt-container.no-crt .screen,
+#switch:checked~.crt-container.no-crt .screen{
+  animation:none;
+  opacity:1;
+  transform:none;
+  filter:none;
+}
+#switch:checked~.crt-container.no-crt::after{
+  animation:none;
+}
+#switch:checked~.crt-container.no-crt .overlay{
+  animation:none;
+}

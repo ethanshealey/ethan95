@@ -30,18 +30,26 @@ function verifyToken(token: string, time: number, difficulty: string): boolean {
 
 export async function GET() {
   const snapshot = await getDocs(query(collection(db, 'minesweeper'), orderBy('time', 'asc')));
-  const allScores = snapshot.docs.map((doc) => {
+  const allScores: Score[] = snapshot.docs.map((doc) => {
     const data = doc.data() as Score;
     return {
       username: data.username,
       time: data.time,
       difficulty: data.difficulty,
-      createdAt: data.createdAt?.toDate().toISOString() ?? '',
+      createdAt: Timestamp.fromDate(new Date(data.createdAt?.toDate().toISOString())) ?? '',
     };
   });
 
+  const uniqueScores = new Map<String, Score>();
+  for (const score of allScores) {
+    const key = `${score.username}:${score.difficulty}`;
+    if (!uniqueScores.has(key) || score.time < uniqueScores.get(key)!.time) {
+      uniqueScores.set(key, score);
+    }
+  }
+
   const grouped = Object.fromEntries(
-    DIFFICULTIES.map((d) => [d, allScores.filter((s) => s.difficulty === d)])
+    DIFFICULTIES.map((d) => [d, [...uniqueScores.values()].filter((s) => s.difficulty === d)])
   );
 
   return Response.json(grouped);

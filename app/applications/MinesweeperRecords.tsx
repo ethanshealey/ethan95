@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Frame } from 'react95';
+import { Button, Frame, Toolbar } from 'react95';
 
 interface MinesweeperRecordsProps {
   windowId: string;
@@ -71,6 +71,11 @@ export default function MinesweeperRecords({ windowId, focusWindow, defaultConte
 
   return (
     <div className="app-content" onClick={(e) => { e.stopPropagation(); focusWindow(windowId); }}>
+      <Toolbar>
+        <div style={{ position: 'relative' }}>
+          <Button variant='menu' size='sm' onClick={getScores}>Refresh</Button>
+        </div>
+      </Toolbar>
       <Frame style={{ padding: '0 20px' }} variant='well'>
         {renderSection('Beginner', scores?.beginner)}
         {renderSection('Intermediate', scores?.intermediate)}
