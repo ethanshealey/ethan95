@@ -1,0 +1,41 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "minesweeper-rooms": {
+      ".indexOn": ["createdAt"],
+
+      "$roomId": {
+        ".read": true,
+
+        ".write": "!data.exists()",
+
+        "grid":       { ".write": "!data.exists()" },
+        "difficulty": { ".write": "!data.exists()" },
+        "mode":       { ".write": "!data.exists()" },
+        "createdAt":  { ".write": "!data.exists()" },
+
+        "status": {
+          ".write": "!data.exists() || (data.val() === 'waiting' && newData.val() === 'playing')",
+          ".validate": "newData.val() === 'waiting' || newData.val() === 'playing' || newData.val() === 'finished'"
+        },
+
+        "host": {
+          ".write": "true",
+          ".validate": "newData.child('revealed').isString() && newData.child('flagCount').isNumber() && newData.child('flagCount').val() >= 0 && newData.child('timer').isNumber() && newData.child('timer').val() >= 0 && newData.child('timer').val() <= 999 && (newData.child('result').val() === 'playing' || newData.child('result').val() === 'won' || newData.child('result').val() === 'lost')"
+        },
+
+        "guest": {
+          ".write": "(!data.exists() && data.parent().child('status').val() === 'waiting') || (data.exists() && data.parent().child('status').val() === 'playing')",
+          ".validate": "newData.child('revealed').isString() && newData.child('flagCount').isNumber() && newData.child('flagCount').val() >= 0 && newData.child('timer').isNumber() && newData.child('timer').val() >= 0 && newData.child('timer').val() <= 999 && (newData.child('result').val() === 'playing' || newData.child('result').val() === 'won' || newData.child('result').val() === 'lost')"
+        },
+
+        "shared": {
+          ".write": "data.parent().child('status').val() === 'playing' || !data.parent().child('grid').exists()",
+          ".validate": "newData.child('revealed').isString() && newData.child('flagCount').isNumber() && newData.child('timer').isNumber() && newData.child('timer').val() >= 0 && newData.child('timer').val() <= 999"
+        }
+      }
+    }
+  }
+}

@@ -42,3 +42,6 @@ public/data/albums-cache.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# firebase functions compiled output
+/functions/lib
