@@ -7,7 +7,7 @@ import { Icons } from '../icons/icons';
 import MinesweeperGrid, { CELL_SIZE } from '../components/minesweeper/MinesweeperGrid';
 import { useWindowManager } from '../hooks/useWindowManager';
 import { Difficulty, GRID_COLS, GRID_ROWS, MINE_COUNTS, generateGrid, floodReveal, checkWin } from '../components/minesweeper/utils/MinesweeperUtils';
-import { generateRoomId, createRoom, joinRoom, subscribeToRoom, syncPlayerState, syncSharedState, Room, RoomMode } from '../../lib/minesweeperRoom';
+import { generateRoomId, createRoom, joinRoom, subscribeToRoom, syncPlayerState, syncSharedState, restartRoom, Room, RoomMode } from '../../lib/minesweeperRoom';
 
 const dseg7 = localFont({
     src: [
@@ -87,9 +87,39 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
     const modeRef       = useRef<RoomMode>('versus');
     const lostCellRef   = useRef<{ x: number; y: number } | null>(null);
     const unsubRef      = useRef<(() => void) | null>(null);
+    const roundRef      = useRef<number>(0);
+
+    // ── Reset local state for a new round (restart) ─────────────────────────
+    const resetForNewRound = useCallback((room: Room) => {
+        roundRef.current = room.round ?? 0;
+        const roomGrid = JSON.parse(room.grid) as number[][];
+        const d = room.difficulty;
+        const initRevealed = room.mode === 'coop' && room.shared
+            ? JSON.parse(room.shared.revealed) as number[][]
+            : blankRevealed(d);
+        const initFlagCount = room.mode === 'coop' && room.shared
+            ? room.shared.flagCount
+            : MINE_COUNTS[d];
+        setGrid(roomGrid);
+        setRevealed(initRevealed);
+        setFlagCount(initFlagCount);
+        setTimer(0);
+        setLostCell(null);
+        lostCellRef.current = null;
+        setWon(false);
+        setGameStarted(true);
+        setOpponentStats(null);
+    }, []);
 
     // ── Room subscription handler ────────────────────────────────────────────
     const handleRoomUpdate = useCallback((room: Room) => {
+        // Detect restart (round increment)
+        const newRound = room.round ?? 0;
+        if (newRound > roundRef.current) {
+            resetForNewRound(room);
+            return;
+        }
+
         // Host: detect when guest joins
         if (playerRoleRef.current === 'host' && room.status === 'playing' && roomStatusRef.current === 'waiting') {
             roomStatusRef.current = 'playing';
@@ -126,7 +156,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
                 });
             }
         }
-    }, []);
+    }, [resetForNewRound]);
 
     // ── Leave / cleanup room ─────────────────────────────────────────────────
     const leaveRoom = useCallback(() => {
@@ -318,6 +348,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
             setWon(false);
             setGameStarted(false);
             lostCellRef.current   = null;
+            roundRef.current      = 0;
             modeRef.current       = mode;
             playerRoleRef.current = 'host';
             roomStatusRef.current = 'waiting';
@@ -382,6 +413,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
             setWon(false);
             setGameStarted(true);
             lostCellRef.current   = null;
+            roundRef.current      = room.round ?? 0;
             modeRef.current       = roomMode;
             playerRoleRef.current = 'guest';
             roomStatusRef.current = 'playing';
@@ -401,6 +433,21 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         }
     };
 
+    // ── Restart Room (host only) ─────────────────────────────────────────────
+    const handleRestartRoom = useCallback(async () => {
+        if (!roomId || playerRole !== 'host') return;
+        const { grid: newGrid } = generateGrid(difficulty);
+        const initRevealed = blankRevealed(difficulty);
+        const hostState = {
+            revealed: JSON.stringify(initRevealed),
+            flagCount: MINE_COUNTS[difficulty],
+            timer: 0,
+            result: 'playing' as const,
+        };
+        const sharedState = modeRef.current === 'coop' ? { ...hostState } : undefined;
+        await restartRoom(roomId, newGrid, difficulty, hostState, sharedState);
+    }, [roomId, playerRole, difficulty]);
+
     // ── Status bar label ─────────────────────────────────────────────────────
     const statusBarLabel = (() => {
         if (!roomId) return '';
@@ -414,6 +461,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         if (!opponentStats) return 'Waiting for opponent...';
         if (opponentStats.result === 'won')  return 'Opponent won!';
         if (opponentStats.result === 'lost') return 'Opponent hit a mine!';
+        if ((won || lostCell) && playerRole === 'guest') return 'Waiting for host to restart...';
         const pct = grid.length ? `${progressPct(grid, JSON.parse(opponentStats.revealed ?? JSON.stringify(blankRevealed(difficulty))))}%` : '';
         return `Opponent - ${opponentStats.timer.toString().padStart(3, '0')}s${pct ? ` · ${pct} cleared` : ''}`;
     })();
@@ -499,6 +547,14 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
                             style={{ imageRendering: 'pixelated' }}
                         />
                         <span style={{ flex: 1 }}>{statusBarLabel}</span>
+                        {playerRole === 'host' && (won || lostCell) && (
+                            <button
+                                onClick={handleRestartRoom}
+                                style={{ fontSize: '9px', cursor: 'pointer', padding: '0 4px', height: '16px', background: '#c0c0c0', border: '1px solid #808080' }}
+                            >
+                                Restart
+                            </button>
+                        )}
                         <button
                             onClick={leaveRoom}
                             style={{ fontSize: '9px', cursor: 'pointer', padding: '0 4px', height: '16px', background: '#c0c0c0', border: '1px solid #808080' }}

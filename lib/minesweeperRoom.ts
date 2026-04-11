@@ -19,6 +19,7 @@ export interface Room {
     grid: string;           // JSON.stringify(number[][])
     status: 'waiting' | 'playing' | 'finished';
     createdAt: number;      // server timestamp — used for expiry cleanup
+    round: number;          // increments on each restart; 0 = initial game
     host: RoomPlayerState;
     guest?: RoomPlayerState;
     shared?: RoomPlayerState; // coop only — single source of truth for board state
@@ -48,6 +49,7 @@ export async function createRoom(
         grid: JSON.stringify(grid),
         status: 'waiting',
         createdAt: serverTimestamp() as unknown as number,
+        round: 0,
         host: hostState,
     };
     if (mode === 'coop' && sharedState) room.shared = sharedState;
@@ -62,7 +64,7 @@ export async function joinRoom(
     const snapshot = await get(rRef);
     if (!snapshot.exists()) return null;
     const room = snapshot.val() as Room;
-    if (room.status !== 'waiting') return null;
+    if (room.status !== 'waiting' && room.status !== 'playing') return null;
     await update(rRef, { guest: guestState, status: 'playing' });
     return { ...room, guest: guestState, status: 'playing' };
 }
@@ -85,6 +87,35 @@ export async function syncPlayerState(
         updates[`minesweeper-rooms/${roomId}/${role}/${key}`] = val;
     }
     await update(ref(rtdb), updates);
+}
+
+export async function restartRoom(
+    roomId: string,
+    grid: number[][],
+    difficulty: Difficulty,
+    hostState: RoomPlayerState,
+    sharedState?: RoomPlayerState,
+): Promise<void> {
+    const rRef = roomRef(roomId);
+    const snapshot = await get(rRef);
+    if (!snapshot.exists()) return;
+    const room = snapshot.val() as Room;
+    const currentRound = room.round ?? 0;
+
+    const updates: Record<string, unknown> = {
+        grid: JSON.stringify(grid),
+        difficulty,
+        status: 'playing',
+        round: currentRound + 1,
+        host: hostState,
+        guest: hostState,
+    };
+
+    if (room.mode === 'coop' && sharedState) {
+        updates['shared'] = sharedState;
+    }
+
+    await update(rRef, updates);
 }
 
 export async function syncSharedState(
