@@ -72,7 +72,7 @@ const TaskBar = () => {
 
   return (
     <div ref={wrapperRef}>
-      <AppBar style={{ top: 'auto', bottom: 0, left: 0, right: 0, zIndex: 10, overflow: 'visible', display: 'flex', justifyContent: 'space-between', flexDirection: 'row' }}>
+      <AppBar style={{ top: 'auto', bottom: 0, left: 0, right: 0, zIndex: 9999, overflow: 'visible', display: 'flex', justifyContent: 'space-between', flexDirection: 'row' }}>
         <Toolbar style={{ flex: 0, display: 'flex', gap: 2 }}>
           <div style={{ position: 'relative' }}>
             <Button
@@ -135,7 +135,7 @@ const TaskBar = () => {
                   <Separator />
                   <MenuListItem
                     style={{ display: 'flex', justifyContent: 'start', cursor: 'pointer' }}
-                    onClick={() => { }}
+                    onClick={() => { openWindow('run'); setOpen(false); }}
                   >
                     <Image
                       src={Icons.APPLICATION_HOURGLASS_SMALL_COOL}

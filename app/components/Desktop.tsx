@@ -6,14 +6,17 @@ import ApplicationContainer from './ApplicationContainer'
 import { useWindowManager } from '../hooks/useWindowManager'
 import { APPLICATIONS, RegisteredApp } from '../applications/index'
 
-const TARGET_APPLICATIONS: string[] = ['mycomputer', 'recyclebin', 'mydocuments', 'notepad', 'internet-explorer', 'games']
+const TARGET_APPLICATIONS: string[] = ['my-computer', 'recycle-bin', 'my-documents', 'notepad', 'internet-explorer', 'games', 'weather', 'command-line']
 
 const Desktop = () => {
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
   const { openWindow, unfocusAll } = useWindowManager()
 
   useEffect(() => {
-    // openWindow('welcome', { props: { resizable: false, minimizable: false, maximizable: false } })
+    const showWelcome = localStorage.getItem('showWelcome');
+    if (showWelcome === null || showWelcome === 'true') {
+      openWindow('welcome');
+    }
   }, [])
 
   return (

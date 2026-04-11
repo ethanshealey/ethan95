@@ -12,8 +12,8 @@ interface ApplicationWindowProps {
 }
 
 const MINIMIZE_EXCLUSION_LIST = ['Welcome'];
-const MAXIMIZE_EXCLUSION_LIST = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Solitaire'];
-const RESIZE_EXCLUSION_LIST   = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Minesweeper Records', 'Solitaire'];
+const MAXIMIZE_EXCLUSION_LIST = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Solitaire', 'Run'];
+const RESIZE_EXCLUSION_LIST   = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Minesweeper Records', 'Solitaire', 'Run'];
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);

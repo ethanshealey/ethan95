@@ -33,7 +33,7 @@ export default function Photos({ windowId, focusWindow }: PhotosProps) {
 
     source.onmessage = (e) => {
       const album: Album = JSON.parse(e.data);
-      setAlbums((prev) => [...prev, album].sort((a, b) => a.index - b.index));
+      setAlbums((prev) => [...prev, album]);
     };
 
     source.onerror = () => source.close();

@@ -621,7 +621,7 @@ export const Icons = {
   WINREP_MAG_GLASS: "/static/icons/w98_winrep_mag_glass.ico",
   WM: "/static/icons/w98_wm.ico",
   WM_FILE: "/static/icons/w98_wm_file.ico",
-  WORLD: "/static/icons/w98_world.ani",
+  WORLD: "/static/icons/w98_world.ico",
   WORLD_ADDRESS_BOOK: "/static/icons/w98_world_address_book.ico",
   WORLD_LOCK: "/static/icons/w98_world_lock.ico",
   WORLD_NETWORK_DIRECTORIES: "/static/icons/w98_world_network_directories.ico",

@@ -29,7 +29,7 @@ function buildStream(albums: Album[]): Response {
 }
 
 export async function GET() {
-  const snapshot = await getDocs(query(collection(db, 'albums'), orderBy('index')));
+  const snapshot = await getDocs(query(collection(db, 'albums'), orderBy('create_ts', 'desc')));
   const albums: Album[] = snapshot.docs.map((doc) => doc.data() as Album);
   console.log(`[photos] serving ${albums.length} albums from Firestore`);
   return buildStream(albums);

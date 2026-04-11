@@ -18,6 +18,9 @@ import MinesweeperRecords from './MinesweeperRecords';
 import Solitaire from './Solitaire';
 import Admin from './Admin';
 import Settings from './Settings';
+import Weather from './Weather';
+import CommandLine from './CommandLine';
+import Run from './Run';
 
 export const DEFAULT_WINDOW_SIZE = { width: 500, height: 400 };
 export const DEFAULT_MIN_SIZE = { width: 300, height: 200 };
@@ -44,19 +47,19 @@ export const APPLICATIONS: RegisteredApp[] = [
     component: Notepad,
   },
   {
-    id: 'mycomputer',
+    id: 'my-computer',
     name: 'My Computer',
     icon: Icons.COMPUTER_EXPLORER,
     component: MyComputer,
   },
   {
-    id: 'recyclebin',
+    id: 'recycle-bin',
     name: 'Recycle Bin',
     icon: Icons.RECYCLE_BIN_FULL_COOL,
     component: RecycleBin,
   },
   {
-    id: 'mydocuments',
+    id: 'my-documents',
     name: 'My Documents',
     icon: Icons.DIRECTORY_OPEN_FILE_MYDOCS,
     component: MyDocuments,
@@ -74,7 +77,7 @@ export const APPLICATIONS: RegisteredApp[] = [
     component: PhotoViewer,
   },
   {
-    id: 'documentviewer',
+    id: 'document-viewer',
     name: 'Document Viewer',
     icon: Icons.DOCUMENT,
     component: DocumentViewer,
@@ -142,6 +145,26 @@ export const APPLICATIONS: RegisteredApp[] = [
     icon: Icons.SETTINGS_GEAR_COOL,
     component: Settings,
   },
+  {
+    id: 'command-line',
+    name: 'Command Line',
+    icon: Icons.CONSOLE_PROMPT,
+    component: CommandLine,
+  },
+  {
+    id: 'run',
+    name: 'Run',
+    icon: Icons.APPLICATION_HOURGLASS_SMALL_COOL,
+    component: Run,
+    fitContent: true,
+  }
+
+  // {
+  //   id: 'weather',
+  //   name: 'Weather',
+  //   icon: Icons.WORLD,
+  //   component: Weather,
+  // },
 ];
 
 export function getAppById(id: string): RegisteredApp | undefined {

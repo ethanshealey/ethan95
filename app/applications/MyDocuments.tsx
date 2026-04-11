@@ -19,7 +19,7 @@ export default function MyDocuments({ windowId, focusWindow }: MyDocumentsProps)
   const items: FileItem[] = [
     { name: 'My Pictures', icon: Icons.PICTURES, type: 'folder', modified: '3/21/2026', onOpen: () => openWindow('photos') },
     { name: 'My Projects', icon: Icons.DIRECTORY_CONTROL_PANEL, type: 'folder', modified: '3/21/2026', onOpen: () => openWindow('my-projects')},
-    { name: 'resume.doc', icon: FileIcons.DOCUMENT, type: 'file', size: '24 KB', modified: '3/21/2026', onOpen: () => openWindow('documentviewer', { props: { defaultContent: '/data/Ethan_Shealey_Resume.docx.pdf' } }) },
+    { name: 'resume.doc', icon: FileIcons.DOCUMENT, type: 'file', size: '24 KB', modified: '3/21/2026', onOpen: () => openWindow('document-viewer', { props: { defaultContent: '/data/Ethan_Shealey_Resume.docx.pdf' } }) },
     { name: 'notes.txt', icon: FileIcons.DOCUMENT, type: 'file', size: '2 KB', modified: '3/20/2026', onOpen: () => openWindow('notepad', { title: 'notes.txt', props: { defaultContent: NOTE_CONTENT } }) },
   ];
 

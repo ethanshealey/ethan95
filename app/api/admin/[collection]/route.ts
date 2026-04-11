@@ -1,5 +1,5 @@
 import { db } from '@/lib/firebase';
-import { collection as firestoreCollection, getDocs, addDoc } from 'firebase/firestore';
+import { collection as firestoreCollection, getDocs, addDoc, Timestamp } from 'firebase/firestore';
 import { verifySessionToken } from '@/lib/admin-auth';
 
 const ALLOWED_COLLECTIONS = ['minesweeper', 'albums'] as const;
@@ -54,6 +54,12 @@ export async function POST(
   }
 
   const body = await request.json();
+  if (col === 'albums') {
+    body.create_ts = Timestamp.now();
+    if (typeof body.links === 'string') {
+      try { body.links = JSON.parse(body.links); } catch { /* leave as-is */ }
+    }
+  }
   const docRef = await addDoc(firestoreCollection(db, col), body);
   return Response.json({ id: docRef.id }, { status: 201 });
 }

@@ -532,3 +532,71 @@ body, html {
   justify-content: center;
   box-sizing: border-box;
 }
+
+.cli-container {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  cursor: text;
+  box-sizing: border-box;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  font-size: 13px;
+}
+
+.cli-scroll {
+  height: 100%;
+  overflow-y: auto;
+  padding: 6px 10px;
+  box-sizing: border-box;
+}
+
+.cli-line {
+  color: #c0c0c0;
+  white-space: pre;
+  line-height: 1.5;
+  min-height: 1.5em;
+}
+
+.cli-input-line {
+  display: flex;
+  align-items: baseline;
+  position: relative;
+}
+
+.cli-prompt {
+  color: #c0c0c0;
+  flex-shrink: 0;
+  white-space: pre;
+}
+
+.cli-text {
+  color: #c0c0c0;
+  white-space: pre;
+}
+
+.cli-cursor {
+  display: inline-block;
+  color: transparent;
+
+  &.cli-cursor--on {
+    color: #c0c0c0;
+  }
+}
+
+.cli-real-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  outline: none;
+  caret-color: transparent;
+  background: transparent;
+}

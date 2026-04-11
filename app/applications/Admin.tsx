@@ -151,9 +151,12 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
     if (!token) return;
     setSaving(true);
     try {
-      const body = activeCollection === 'albums'
+      const body: Record<string, unknown> = activeCollection === 'albums'
         ? { ...editFields, index: docs.length }
-        : editFields;
+        : { ...editFields };
+      if (activeCollection === 'albums' && typeof body.links === 'string') {
+        try { body.links = JSON.parse(body.links as string); } catch { /* leave as-is */ }
+      }
       const res = await fetch(`/api/admin/${activeCollection}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -162,7 +165,7 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
       if (res.status === 401) { setToken(null); return; }
       if (res.ok) {
         const { id } = await res.json();
-        setDocs((prev) => [...prev, { id, ...editFields }]);
+        setDocs((prev) => [...prev, { id, ...body }]);
         setIsAdding(false);
       }
     } finally {
