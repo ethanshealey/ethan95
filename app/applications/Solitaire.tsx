@@ -499,20 +499,6 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
             />
           ))}
 
-          {/* Win overlay */}
-          {won && (
-            <div style={{
-              position: 'absolute', inset: 0, zIndex: 2000,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backgroundColor: 'rgba(0,0,0,0.45)',
-            }}>
-              <Frame variant='window' style={{ padding: '24px 32px', textAlign: 'center' }}>
-                <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>You Win!</h2>
-                <Button onClick={() => { setGame(dealGame()); setSelected(null); }}>Play Again</Button>
-              </Frame>
-            </div>
-          )}
-
         </div>
       </div>
     </div>

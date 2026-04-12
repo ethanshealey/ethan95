@@ -269,6 +269,53 @@ export function isSolvable(game: GameState): boolean {
   return false;
 }
 
+// Removes duplicate cards (same suit+rank) from the game state, prioritising
+// keeping cards in higher-priority locations: foundation > waste > stock > tableau.
+// This guards against rare race conditions where two rapid state updates
+// (e.g. drag-drop + double-click auto-move) both push the same card.
+function deduplicateGameState(g: GameState): GameState {
+  const cardKey = (c: Card) => `${c.suit}:${c.rank}`;
+  const seen = new Set<string>();
+
+  // Foundations — highest priority (keep first occurrence in each pile)
+  const foundations = g.foundations.map(pile =>
+    pile.filter(c => {
+      const k = cardKey(c);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    })
+  ) as GameState['foundations'];
+
+  // Waste
+  const waste = g.waste.filter(c => {
+    const k = cardKey(c);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  // Stock
+  const stock = g.stock.filter(c => {
+    const k = cardKey(c);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  // Tableau — lowest priority (duplicates removed here first)
+  const tableau = g.tableau.map(col =>
+    col.filter(c => {
+      const k = cardKey(c);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    })
+  );
+
+  return { stock, waste, foundations, tableau };
+}
+
 export function applyMove(
   g: GameState,
   source: Source,
@@ -297,5 +344,5 @@ export function applyMove(
   if (targetType === 'foundation') ng.foundations[targetIndex].push(...moved);
   else ng.tableau[targetIndex].push(...moved);
 
-  return ng;
+  return deduplicateGameState(ng);
 }
