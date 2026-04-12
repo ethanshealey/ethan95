@@ -1,6 +1,6 @@
 import { createHmac } from 'crypto';
 
-export const EXPIRY_SECONDS = 300;
+export const EXPIRY_SECONDS = 1;
 
 export async function POST() {
   const timestamp = Math.floor(Date.now() / 1000);

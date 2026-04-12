@@ -1,7 +1,7 @@
 import { createHmac } from 'crypto';
 
 const DIFFICULTIES = ['beginner', 'intermediate', 'expert'] as const;
-export const EXPIRY_SECONDS = 300;
+export const EXPIRY_SECONDS = 1;
 
 export async function POST(request: Request) {
   const { time, difficulty } = await request.json();

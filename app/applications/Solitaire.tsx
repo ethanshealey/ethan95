@@ -297,9 +297,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
   useEffect(() => {
     if (!won) return;
     (async () => {
-      const res = await fetch('/api/solitaire/token', { method: 'POST' });
-      const { token } = await res.json();
-      openWindow('solitaire-winner', { props: { token } });
+      openWindow('solitaire-winner');
     })();
   }, [won]);
 

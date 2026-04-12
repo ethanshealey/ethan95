@@ -10,7 +10,7 @@ interface SolitaireWinnerProps {
   token?: string;
 }
 
-export default function SolitaireWinner({ windowId, focusWindow, token }: SolitaireWinnerProps) {
+export default function SolitaireWinner({ windowId, focusWindow }: SolitaireWinnerProps) {
   const { closeWindow } = useWindowManager();
   const [text, setText] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -21,7 +21,11 @@ export default function SolitaireWinner({ windowId, focusWindow, token }: Solita
   }, []);
 
   const submit = async () => {
-      if(!text.trim() || !token) {
+
+    const res = await fetch('/api/solitaire/token', { method: 'POST' });
+    const { token } = await res.json();
+
+    if(!text.trim() || !token) {
       alert('No cheating ;)')
       return
     }

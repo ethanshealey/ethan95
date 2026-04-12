@@ -307,13 +307,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
             }
             // Single-player win
             const winTime = timer;
-            const res = await fetch('/api/minesweeper/token', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ time: winTime, difficulty }),
-            });
-            const { token } = await res.json();
-            openWindow('minesweeper-winner', { props: { time: winTime, difficulty, token } });
+            openWindow('minesweeper-winner', { props: { time: winTime, difficulty } });
         }
     };
 

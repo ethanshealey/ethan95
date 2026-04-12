@@ -12,7 +12,7 @@ interface MinesweeperWinnerProps {
   token?: string;
 }
 
-export default function MinesweeperWinner({ windowId, focusWindow, time, difficulty, token }: MinesweeperWinnerProps) {
+export default function MinesweeperWinner({ windowId, focusWindow, time, difficulty }: MinesweeperWinnerProps) {
 
   const { closeWindow } = useWindowManager();
 
@@ -24,6 +24,14 @@ export default function MinesweeperWinner({ windowId, focusWindow, time, difficu
   }, [])
 
   const submit = async () => {
+
+    const tokenRes = await fetch('/api/minesweeper/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ time: time, difficulty }),
+    });
+    const { token } = await tokenRes.json();
+
     if(!time || !difficulty?.trim() || !token) {
       alert('No cheating ;)')
       return
