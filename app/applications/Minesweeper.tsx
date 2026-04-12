@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import localFont from 'next/font/local';
-import { Button, Frame, MenuList, MenuListItem, Radio, ScrollView, Separator, TextInput, Toolbar } from 'react95';
+import { Button, Frame, MenuList, MenuListItem, Radio, Separator, TextInput, Toolbar } from 'react95';
 import { Icons } from '../icons/icons';
 import MinesweeperGrid, { CELL_SIZE } from '../components/minesweeper/MinesweeperGrid';
 import { useWindowManager } from '../hooks/useWindowManager';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { Difficulty, GRID_COLS, GRID_ROWS, MINE_COUNTS, generateGrid, floodReveal, checkWin } from '../components/minesweeper/utils/MinesweeperUtils';
 import { generateRoomId, createRoom, joinRoom, subscribeToRoom, syncPlayerState, syncSharedState, restartRoom, Room, RoomMode } from '../../lib/minesweeperRoom';
 
@@ -53,6 +54,7 @@ function progressPct(grid: number[][], revealed: number[][]): number {
 export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps) {
 
     const { openWindow, setSize } = useWindowManager();
+    const isMobile = useIsMobile();
 
     // ── Single-player state ──────────────────────────────────────────────────
     const [difficulty, setDifficulty]                 = useState<Difficulty>('beginner');
@@ -64,8 +66,10 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
     const [lostCell, setLostCell]                     = useState<{ x: number; y: number } | null>(null);
     const [won, setWon]                               = useState<boolean>(false);
     const [gameStarted, setGameStarted]               = useState<boolean>(false);
-    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const menuRef  = useRef<HTMLDivElement>(null);
+    const [boardScale, setBoardScale]                   = useState<number>(1);
+    const timerRef          = useRef<ReturnType<typeof setInterval> | null>(null);
+    const menuRef           = useRef<HTMLDivElement>(null);
+    const boardContainerRef = useRef<HTMLDivElement>(null);
 
     // ── Multiplayer state ────────────────────────────────────────────────────
     const [roomId, setRoomId]               = useState<string | null>(null);
@@ -82,12 +86,14 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
     const [joiningRoom, setJoiningRoom]     = useState(false);
 
     // Stable refs - subscription callback must never capture stale state
+    const roomIdRef     = useRef<string | null>(null);
     const playerRoleRef = useRef<'host' | 'guest' | null>(null);
     const roomStatusRef = useRef<'waiting' | 'playing' | null>(null);
     const modeRef       = useRef<RoomMode>('versus');
     const lostCellRef   = useRef<{ x: number; y: number } | null>(null);
     const unsubRef      = useRef<(() => void) | null>(null);
     const roundRef      = useRef<number>(0);
+    roomIdRef.current = roomId;
 
     // ── Reset local state for a new round (restart) ─────────────────────────
     const resetForNewRound = useCallback((room: Room) => {
@@ -197,6 +203,24 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         startNewGame(difficulty);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [difficulty]);
+
+    // ── Board scaling (mobile only) ──────────────────────────────────────────
+    useEffect(() => {
+        if (!isMobile) {
+            setBoardScale(1);
+            return;
+        }
+        if (!boardContainerRef.current) return;
+        const obs = new ResizeObserver(entries => {
+            const { width } = entries[0].contentRect;
+            const availableH = window.innerHeight - CHROME_H - 50 - (roomIdRef.current ? OPPONENT_BAR_H : 0);
+            const scaleW = width      / (GRID_COLS[difficulty] * CELL_SIZE);
+            const scaleH = availableH / (GRID_ROWS[difficulty] * CELL_SIZE);
+            setBoardScale(Math.min(scaleW, scaleH));
+        });
+        obs.observe(boardContainerRef.current);
+        return () => obs.disconnect();
+    }, [isMobile, difficulty]);
 
     // ── Timer ────────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -580,7 +604,11 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
                     </div>
                 )}
 
-                <ScrollView className='minesweeper-board'>
+                <div
+                    ref={boardContainerRef}
+                    className='minesweeper-board'
+                    style={{ '--cell-size': `${CELL_SIZE * boardScale}px` } as React.CSSProperties}
+                >
                     {grid.length > 0 && (
                         <MinesweeperGrid
                             grid={grid}
@@ -591,7 +619,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
                             onCellRightClick={onCellRightClick}
                         />
                     )}
-                </ScrollView>
+                </div>
             </Frame>
 
             {/* ── Mode Selection Modal ─────────────────────────────────────── */}

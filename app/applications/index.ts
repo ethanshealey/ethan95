@@ -16,6 +16,8 @@ import Minesweeper from './Minesweeper';
 import MinesweeperWinner from './MinesweeperWinner';
 import MinesweeperRecords from './MinesweeperRecords';
 import Solitaire from './Solitaire';
+import SolitaireWinner from './SolitaireWinner';
+import SolitaireLeaderboard from './SolitaireLeaderboard';
 import Admin from './Admin';
 import Settings from './Settings';
 import Weather from './Weather';
@@ -131,6 +133,20 @@ export const APPLICATIONS: RegisteredApp[] = [
     name: 'Solitaire',
     icon: Icons.GAME_SOLITAIRE,
     component: Solitaire,
+    fitContent: true,
+  },
+  {
+    id: 'solitaire-winner',
+    name: 'Solitaire Winner',
+    icon: Icons.GAME_SOLITAIRE,
+    component: SolitaireWinner,
+    fitContent: true,
+  },
+  {
+    id: 'solitaire-leaderboard',
+    name: 'Solitaire Leaderboard',
+    icon: Icons.GAME_SOLITAIRE,
+    component: SolitaireLeaderboard,
     fitContent: true,
   },
   {

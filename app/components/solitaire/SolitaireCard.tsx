@@ -1,12 +1,11 @@
 import { Card, CARD_W, CARD_H, SUIT_SYMBOLS, RANK_LABELS, isRed } from './utils/SolitaireUtils';
 
-export function CardFace({ card, style, hidden, highlight, onMouseDown, onTouchStart, onDoubleClick }: {
+export function CardFace({ card, style, hidden, highlight, onPointerDown, onDoubleClick }: {
   card: Card;
   style?: React.CSSProperties;
   hidden?: boolean;
   highlight?: 'source' | 'target' | 'selected';
-  onMouseDown?: (e: React.MouseEvent) => void;
-  onTouchStart?: (e: React.TouchEvent) => void;
+  onPointerDown?: (e: React.PointerEvent) => void;
   onDoubleClick?: () => void;
 }) {
   const color = isRed(card.suit) ? '#cc0000' : '#111';
@@ -19,16 +18,15 @@ export function CardFace({ card, style, hidden, highlight, onMouseDown, onTouchS
     : undefined;
   return (
     <div
-      style={{ width: CARD_W, height: CARD_H, ...style, visibility: hidden ? 'hidden' : undefined }}
-      onMouseDown={onMouseDown}
-      onTouchStart={onTouchStart}
+      style={{ width: CARD_W, height: CARD_H, ...style, visibility: hidden ? 'hidden' : undefined, touchAction: onPointerDown ? 'none' : undefined }}
+      onPointerDown={onPointerDown}
       onDoubleClick={onDoubleClick}
     >
       <div style={{
         position: 'relative', width: '100%', height: '100%',
         backgroundColor: 'white', border: '1px solid #999', borderRadius: 4,
         boxSizing: 'border-box', color, overflow: 'hidden',
-        cursor: onMouseDown || onTouchStart ? 'grab' : 'default',
+        cursor: onPointerDown ? 'grab' : 'default',
         boxShadow,
       }}>
         <div style={{ position: 'absolute', top: 2, left: 4, fontSize: 11, lineHeight: 1.2, fontFamily: 'sans-serif' }}>

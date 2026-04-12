@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Button, Frame, MenuList, MenuListItem, Toolbar } from 'react95';
+import { Button, Frame, MenuList, MenuListItem, Separator, Toolbar } from 'react95';
+import { useWindowManager } from '../hooks/useWindowManager';
+import { useIsMobile } from '../hooks/useIsMobile';
 import {
   Card, GameState, Source, HintResult,
   SUIT_ORDER, SUIT_SYMBOLS, FACE_UP_STEP, BOARD_W, BOARD_H, PADDING, TABLEAU_Y, CARD_W, CARD_H,
@@ -52,6 +54,11 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
   scaleRef.current = scale;
   selectedRef.current = selected;
 
+  const { openWindow } = useWindowManager();
+  const isMobile = useIsMobile();
+  const isMobileRef = useRef(isMobile);
+  isMobileRef.current = isMobile;
+
   const [hint, setHint] = useState<HintResult | null>(null);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -60,7 +67,20 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     if (!containerRef.current) return;
     const obs = new ResizeObserver(entries => {
       const w = entries[0].contentRect.width;
-      setScale(Math.min(1, w / BOARD_W));
+      const scaleW = w / BOARD_W;
+      if (!isMobileRef.current) {
+        setScale(Math.min(1, scaleW));
+        return;
+      }
+      const parent = containerRef.current!.parentElement;
+      const siblingH = parent
+        ? Array.from(parent.children)
+            .filter(el => el !== containerRef.current)
+            .reduce((sum, el) => sum + (el as HTMLElement).clientHeight, 0)
+        : 0;
+      const availableH = (parent?.clientHeight ?? BOARD_H) - siblingH;
+      const scaleH = availableH / BOARD_H;
+      setScale(Math.min(scaleW, scaleH));
     });
     obs.observe(containerRef.current);
     return () => obs.disconnect();
@@ -176,7 +196,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     setSelected(null);
   };
 
-  // ─── Document-level pointer events (mouse + touch) ──────────────────────────
+  // ─── Document-level pointer events (mouse + touch unified) ────────────────
   useEffect(() => {
     const getBoardCoords = (clientX: number, clientY: number) => {
       if (!boardRef.current) return null;
@@ -185,14 +205,8 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
       return { bx: (clientX - rect.left) / s, by: (clientY - rect.top) / s };
     };
 
-    const onMove = (e: MouseEvent | TouchEvent) => {
-      const isTouch = 'touches' in e;
-      const src = isTouch
-        ? (e as TouchEvent).touches[0]
-        : (e as MouseEvent);
-      if (!src) return;
-
-      const coords = getBoardCoords(src.clientX, src.clientY);
+    const onMove = (e: PointerEvent) => {
+      const coords = getBoardCoords(e.clientX, e.clientY);
       if (!coords) return;
       const { bx, by } = coords;
 
@@ -211,62 +225,47 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
           dragRef.current = newDrag;
           setDragState(newDrag);
           setSelected(null);
-          if (isTouch) (e as TouchEvent).preventDefault();
         }
       } else if (dragRef.current) {
-        if (isTouch) (e as TouchEvent).preventDefault();
         dragRef.current = { ...dragRef.current, x: bx, y: by };
         setDragState({ ...dragRef.current });
       }
     };
 
-    const onUp = (e: MouseEvent | TouchEvent) => {
+    const onUp = (e: PointerEvent) => {
       const pending = pendingRef.current;
       const d = dragRef.current;
       pendingRef.current = null;
       dragRef.current = null;
       setDragState(null);
 
-      const isTouch = 'changedTouches' in e;
-      const src = isTouch
-        ? (e as TouchEvent).changedTouches[0]
-        : (e as MouseEvent);
-      if (!src) return;
-
       if (d) {
-        const coords = getBoardCoords(src.clientX, src.clientY);
+        const coords = getBoardCoords(e.clientX, e.clientY);
         if (coords) dropCardsRef.current(d, coords.bx, coords.by);
       } else if (pending) {
         handleTapRef.current(pending.cards, pending.source);
       }
     };
 
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend', onUp);
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
     return () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onUp);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
     };
   }, []);
 
   const startInteraction = useCallback((
-    e: React.MouseEvent | React.TouchEvent,
+    e: React.PointerEvent,
     cards: Card[], source: Source, cardX: number, cardY: number,
   ) => {
     e.preventDefault();
     e.stopPropagation();
     if (!boardRef.current) return;
-    const isTouch = 'touches' in e;
-    const clientX = isTouch ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
-    const clientY = isTouch ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY;
     const rect = boardRef.current.getBoundingClientRect();
     const s = scaleRef.current;
-    const bx = (clientX - rect.left) / s;
-    const by = (clientY - rect.top) / s;
+    const bx = (e.clientX - rect.left) / s;
+    const by = (e.clientY - rect.top) / s;
     pendingRef.current = { cards, source, cardX, cardY, startBX: bx, startBY: by };
   }, []);
 
@@ -294,6 +293,15 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
 
   const won = game.foundations.every(f => f.length === 13);
   const stuck = useMemo(() => !isSolvable(game), [game]);
+
+  useEffect(() => {
+    if (!won) return;
+    (async () => {
+      const res = await fetch('/api/solitaire/token', { method: 'POST' });
+      const { token } = await res.json();
+      openWindow('solitaire-winner', { props: { token } });
+    })();
+  }, [won]);
 
   const isDraggedCard = (source: Source, cardIndex: number): boolean => {
     const d = drag;
@@ -342,6 +350,13 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
               >
                 New
               </MenuListItem>
+              <Separator />
+              <MenuListItem
+                style={{ cursor: 'pointer' }}
+                onClick={() => { openWindow('solitaire-leaderboard'); setShowMenu(false); }}
+              >
+                Leaderboard
+              </MenuListItem>
             </MenuList>
           )}
         </div>
@@ -377,7 +392,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
             height: BOARD_H,
             cursor: drag ? 'grabbing' : 'default',
             transformOrigin: 'top left',
-            transform: scale < 1 ? `scale(${scale})` : undefined,
+            transform: scale !== 1 ? `scale(${scale})` : undefined,
           }}
         >
           {/* Stock */}
@@ -398,8 +413,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
                 isSelectedCard({ type: 'waste' }, 0),
               )}
               style={{ position: 'absolute', left: colX(1), top: PADDING }}
-              onMouseDown={(e) => startInteraction(e, [game.waste[game.waste.length - 1]], { type: 'waste' }, colX(1), PADDING)}
-              onTouchStart={(e) => startInteraction(e, [game.waste[game.waste.length - 1]], { type: 'waste' }, colX(1), PADDING)}
+              onPointerDown={(e) => startInteraction(e, [game.waste[game.waste.length - 1]], { type: 'waste' }, colX(1), PADDING)}
               onDoubleClick={() => autoMove({ type: 'waste' }, game.waste[game.waste.length - 1])}
             />
           ) : (
@@ -421,8 +435,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
                   isSelectedCard({ type: 'foundation', index: fi }, 0),
                 )}
                 style={{ position: 'absolute', left: x, top: PADDING }}
-                onMouseDown={(e) => startInteraction(e, [topCard], { type: 'foundation', index: fi }, x, PADDING)}
-                onTouchStart={(e) => startInteraction(e, [topCard], { type: 'foundation', index: fi }, x, PADDING)}
+                onPointerDown={(e) => startInteraction(e, [topCard], { type: 'foundation', index: fi }, x, PADDING)}
               />
             ) : (
               <EmptyPile
@@ -465,8 +478,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
                     isSelectedCard({ type: 'tableau', col: ci, cardIndex }, cardIndex),
                   )}
                   style={{ position: 'absolute', left: x, top: y }}
-                  onMouseDown={(e) => startInteraction(e, col.slice(cardIndex), { type: 'tableau', col: ci, cardIndex }, x, y)}
-                  onTouchStart={(e) => startInteraction(e, col.slice(cardIndex), { type: 'tableau', col: ci, cardIndex }, x, y)}
+                  onPointerDown={(e) => startInteraction(e, col.slice(cardIndex), { type: 'tableau', col: ci, cardIndex }, x, y)}
                   onDoubleClick={isTop ? () => autoMove({ type: 'tableau', col: ci, cardIndex }, card) : undefined}
                 />
               );
@@ -502,6 +514,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
               </Frame>
             </div>
           )}
+
         </div>
       </div>
     </div>

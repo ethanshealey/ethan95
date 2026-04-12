@@ -2,9 +2,9 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { useWindowManager } from '../hooks/useWindowManager';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { AppWindow } from '../context/WindowManagerContext';
 import { RegisteredApp, DEFAULT_MIN_SIZE } from '../applications/index';
-import Image from 'next/image';
 
 interface ApplicationWindowProps {
   windowData: AppWindow;
@@ -12,20 +12,8 @@ interface ApplicationWindowProps {
 }
 
 const MINIMIZE_EXCLUSION_LIST = ['Welcome'];
-const MAXIMIZE_EXCLUSION_LIST = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Solitaire', 'Run'];
-const RESIZE_EXCLUSION_LIST   = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Minesweeper Records', 'Solitaire', 'Run'];
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-  return isMobile;
-}
+const MAXIMIZE_EXCLUSION_LIST = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Solitaire', 'Solitaire Winner', 'Run'];
+const RESIZE_EXCLUSION_LIST   = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Minesweeper Records', 'Solitaire', 'Solitaire Winner', 'Solitaire Leaderboard', 'Run'];
 
 export default function ApplicationWindow({ windowData, app }: ApplicationWindowProps) {
   const { focusWindow, setPosition, setSize, toggleMinimize, toggleMaximize, closeWindow } = useWindowManager();
