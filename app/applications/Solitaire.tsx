@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, Fragment } from 'react';
 import { Button, Frame, MenuList, MenuListItem, Separator, Toolbar } from 'react95';
 import { useWindowManager } from '../hooks/useWindowManager';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -8,7 +8,7 @@ import {
   Card, GameState, Source, HintResult,
   SUIT_ORDER, SUIT_SYMBOLS, FACE_UP_STEP, BOARD_W, BOARD_H, PADDING, TABLEAU_Y, CARD_W, CARD_H,
   dealGame, canMoveToTableau, canMoveToFoundation,
-  getFoundationIndex, applyMove, colX, tableauCardY, findHint, isSolvable,
+  getFoundationIndex, applyMove, colX, tableauCardY, findHint,
 } from '../components/solitaire/utils/SolitaireUtils';
 import { CardFace, CardBack, EmptyPile } from '../components/solitaire/SolitaireCard';
 
@@ -37,12 +37,27 @@ interface SolitaireProps {
   focusWindow: (id: string) => void;
 }
 
+type SolitaireState = { game: GameState; history: GameState[] };
+
 export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
-  const [game, setGame] = useState<GameState>(() => dealGame());
+  const [{ game, history }, setGameState] = useState<SolitaireState>(() => ({ game: dealGame(), history: [] }));
+
+  // Wraps all game-mutating updates: pushes the previous state onto the history
+  // stack only when the state actually changes (functional updates that return
+  // the same reference, i.e. invalid moves, are ignored).
+  const setGame = useCallback((updater: (g: GameState) => GameState) => {
+    setGameState(s => {
+      const next = updater(s.game);
+      if (next === s.game) return s;
+      return { game: next, history: [...s.history, s.game] };
+    });
+  }, []);
   const [drag, setDragState] = useState<DragState>(null);
   const [selected, setSelected] = useState<SelectedState>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [scale, setScale] = useState(1);
+  const [stuck, setStuck] = useState(false);
+  const won = game.foundations.every(f => f.length === 13);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
@@ -51,6 +66,8 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
   const pendingRef = useRef<PendingInteraction>(null);
   const scaleRef = useRef(1);
   const selectedRef = useRef<SelectedState>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const solveSeqRef = useRef(0);
   scaleRef.current = scale;
   selectedRef.current = selected;
 
@@ -102,6 +119,26 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showMenu]);
+
+  // Initialise the solver worker once; terminate on unmount
+  useEffect(() => {
+    const w = new Worker(
+      new URL('../components/solitaire/utils/solitaireSolver.worker.ts', import.meta.url),
+    );
+    w.onmessage = (e: MessageEvent<{ solvable: boolean; seq: number }>) => {
+      if (e.data.seq === solveSeqRef.current) setStuck(!e.data.solvable);
+    };
+    workerRef.current = w;
+    return () => w.terminate();
+  }, []);
+
+  // Re-run the solver whenever the board changes; discard stale results via seq
+  useEffect(() => {
+    if (won) { setStuck(false); return; }
+    const seq = ++solveSeqRef.current;
+    setStuck(false);
+    workerRef.current?.postMessage({ game, seq });
+  }, [game, won]);
 
   // ─── Drop logic ────────────────────────────────────────────────────────────
   // Stored in a ref so document handlers always call the latest version
@@ -291,8 +328,14 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     });
   }, []);
 
-  const won = game.foundations.every(f => f.length === 13);
-  const stuck = useMemo(() => !isSolvable(game), [game]);
+  const undo = useCallback(() => {
+    setGameState(s => {
+      if (s.history.length === 0) return s;
+      return { game: s.history[s.history.length - 1], history: s.history.slice(0, -1) };
+    });
+    setSelected(null);
+    setDragState(null);
+  }, []);
 
   useEffect(() => {
     if (!won) return;
@@ -335,6 +378,117 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     isSel: boolean,
   ): 'source' | 'target' | 'selected' | undefined => isSel ? 'selected' : base;
 
+  // ─── Board render helpers ───────────────────────────────────────────────────
+
+  const renderStock = () => (
+    <div
+      style={{ position: 'absolute', left: colX(0), top: PADDING, cursor: 'pointer' }}
+      onClick={clickStock}
+    >
+      {game.stock.length > 0 ? <CardBack /> : <EmptyPile label="↺" />}
+    </div>
+  );
+
+  const renderWaste = () => {
+    const wasteTop = game.waste[game.waste.length - 1];
+    return game.waste.length > 0 ? (
+      <CardFace
+        card={wasteTop}
+        hidden={isDraggedCard({ type: 'waste' }, 0)}
+        highlight={getHighlight(isHintWasteSrc ? 'source' : undefined, isSelectedCard({ type: 'waste' }, 0))}
+        style={{ position: 'absolute', left: colX(1), top: PADDING }}
+        onPointerDown={(e) => startInteraction(e, [wasteTop], { type: 'waste' }, colX(1), PADDING)}
+        onDoubleClick={() => autoMove({ type: 'waste' }, wasteTop)}
+      />
+    ) : (
+      <EmptyPile style={{ position: 'absolute', left: colX(1), top: PADDING }} />
+    );
+  };
+
+  const renderFoundations = () =>
+    SUIT_ORDER.map((suit, fi) => {
+      const pile = game.foundations[fi];
+      const topCard = pile.length > 0 ? pile[pile.length - 1] : null;
+      const x = colX(3 + fi);
+      return topCard ? (
+        <CardFace
+          key={suit}
+          card={topCard}
+          hidden={isDraggedCard({ type: 'foundation', index: fi }, 0)}
+          highlight={getHighlight(
+            isHintFoundSrc(fi) ? 'source' : isHintFoundTgt(fi) ? 'target' : undefined,
+            isSelectedCard({ type: 'foundation', index: fi }, 0),
+          )}
+          style={{ position: 'absolute', left: x, top: PADDING }}
+          onPointerDown={(e) => startInteraction(e, [topCard], { type: 'foundation', index: fi }, x, PADDING)}
+        />
+      ) : (
+        <EmptyPile
+          key={suit}
+          label={SUIT_SYMBOLS[suit]}
+          highlight={isHintFoundTgt(fi) ? 'target' : undefined}
+          style={{ position: 'absolute', left: x, top: PADDING }}
+          onClick={() => handleEmptyTapRef.current('foundation', fi)}
+        />
+      );
+    });
+
+  const renderTableauColumn = (col: Card[], ci: number) => {
+    const x = colX(ci);
+    if (col.length === 0) {
+      return (
+        <EmptyPile
+          key={`empty-${ci}`}
+          highlight={isHintTabTgt(ci) ? 'target' : undefined}
+          style={{ position: 'absolute', left: x, top: TABLEAU_Y }}
+          onClick={() => handleEmptyTapRef.current('tableau', ci)}
+        />
+      );
+    }
+    return (
+      <Fragment key={`col-${ci}`}>
+        {col.map((card, cardIndex) => {
+          const y = tableauCardY(col, cardIndex);
+          if (!card.faceUp) {
+            return <CardBack key={`${ci}-${cardIndex}`} style={{ position: 'absolute', left: x, top: y }} />;
+          }
+          const hidden = isDraggedCard({ type: 'tableau', col: ci, cardIndex }, cardIndex);
+          const isTop = cardIndex === col.length - 1;
+          return (
+            <CardFace
+              key={`${ci}-${cardIndex}`}
+              card={card}
+              hidden={hidden}
+              highlight={getHighlight(
+                isHintTabSrc(ci, cardIndex) ? 'source' : (isHintTabTgt(ci) && isTop) ? 'target' : undefined,
+                isSelectedCard({ type: 'tableau', col: ci, cardIndex }, cardIndex),
+              )}
+              style={{ position: 'absolute', left: x, top: y }}
+              onPointerDown={(e) => startInteraction(e, col.slice(cardIndex), { type: 'tableau', col: ci, cardIndex }, x, y)}
+              onDoubleClick={isTop ? () => autoMove({ type: 'tableau', col: ci, cardIndex }, card) : undefined}
+            />
+          );
+        })}
+      </Fragment>
+    );
+  };
+
+  const renderDragLayer = (d: NonNullable<DragState>) =>
+    d.cards.map((card, i) => (
+      <CardFace
+        key={`drag-${i}`}
+        card={card}
+        style={{
+          position: 'absolute',
+          left: d.x - d.ox,
+          top: d.y - d.oy + i * FACE_UP_STEP,
+          zIndex: 1000 + i,
+          pointerEvents: 'none',
+          boxShadow: '3px 3px 8px rgba(0,0,0,0.4)',
+        }}
+      />
+    ));
+
   return (
     <div className="app-content" onClick={(e) => { e.stopPropagation(); focusWindow(windowId); }}>
       <Toolbar>
@@ -344,7 +498,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
             <MenuList style={{ position: 'absolute', top: '100%', left: 0, zIndex: 2000 }}>
               <MenuListItem
                 style={{ cursor: 'pointer' }}
-                onClick={() => { setGame(dealGame()); setDragState(null); setSelected(null); setShowMenu(false); }}
+                onClick={() => { setGameState({ game: dealGame(), history: [] }); setDragState(null); setSelected(null); setShowMenu(false); }}
               >
                 New
               </MenuListItem>
@@ -363,6 +517,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
           const h = findHint(game);
           if (h) { setHint(h); hintTimerRef.current = setTimeout(clearHint, 3000); }
         }}>Help</Button>
+        <Button variant='menu' size='sm' onClick={undo} disabled={history.length === 0}>Undo</Button>
         {!won && stuck && (
           <span style={{ marginLeft: 8, fontSize: 12, color: '#800000', fontFamily: 'sans-serif', alignSelf: 'center' }}>
             No moves remaining
@@ -393,111 +548,11 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
             transform: scale !== 1 ? `scale(${scale})` : undefined,
           }}
         >
-          {/* Stock */}
-          <div
-            style={{ position: 'absolute', left: colX(0), top: PADDING, cursor: 'pointer' }}
-            onClick={clickStock}
-          >
-            {game.stock.length > 0 ? <CardBack /> : <EmptyPile label="↺" />}
-          </div>
-
-          {/* Waste */}
-          {game.waste.length > 0 ? (
-            <CardFace
-              card={game.waste[game.waste.length - 1]}
-              hidden={isDraggedCard({ type: 'waste' }, 0)}
-              highlight={getHighlight(
-                isHintWasteSrc ? 'source' : undefined,
-                isSelectedCard({ type: 'waste' }, 0),
-              )}
-              style={{ position: 'absolute', left: colX(1), top: PADDING }}
-              onPointerDown={(e) => startInteraction(e, [game.waste[game.waste.length - 1]], { type: 'waste' }, colX(1), PADDING)}
-              onDoubleClick={() => autoMove({ type: 'waste' }, game.waste[game.waste.length - 1])}
-            />
-          ) : (
-            <EmptyPile style={{ position: 'absolute', left: colX(1), top: PADDING }} />
-          )}
-
-          {/* Foundations */}
-          {SUIT_ORDER.map((suit, fi) => {
-            const pile = game.foundations[fi];
-            const topCard = pile.length > 0 ? pile[pile.length - 1] : null;
-            const x = colX(3 + fi);
-            return topCard ? (
-              <CardFace
-                key={suit}
-                card={topCard}
-                hidden={isDraggedCard({ type: 'foundation', index: fi }, 0)}
-                highlight={getHighlight(
-                  isHintFoundSrc(fi) ? 'source' : isHintFoundTgt(fi) ? 'target' : undefined,
-                  isSelectedCard({ type: 'foundation', index: fi }, 0),
-                )}
-                style={{ position: 'absolute', left: x, top: PADDING }}
-                onPointerDown={(e) => startInteraction(e, [topCard], { type: 'foundation', index: fi }, x, PADDING)}
-              />
-            ) : (
-              <EmptyPile
-                key={suit}
-                label={SUIT_SYMBOLS[suit]}
-                highlight={isHintFoundTgt(fi) ? 'target' : undefined}
-                style={{ position: 'absolute', left: x, top: PADDING }}
-                onClick={() => handleEmptyTapRef.current('foundation', fi)}
-              />
-            );
-          })}
-
-          {/* Tableau */}
-          {game.tableau.map((col, ci) => {
-            const x = colX(ci);
-            if (col.length === 0) {
-              return (
-                <EmptyPile
-                  key={`empty-${ci}`}
-                  highlight={isHintTabTgt(ci) ? 'target' : undefined}
-                  style={{ position: 'absolute', left: x, top: TABLEAU_Y }}
-                  onClick={() => handleEmptyTapRef.current('tableau', ci)}
-                />
-              );
-            }
-            return col.map((card, cardIndex) => {
-              const y = tableauCardY(col, cardIndex);
-              if (!card.faceUp) {
-                return <CardBack key={`${ci}-${cardIndex}`} style={{ position: 'absolute', left: x, top: y }} />;
-              }
-              const hidden = isDraggedCard({ type: 'tableau', col: ci, cardIndex }, cardIndex);
-              const isTop = cardIndex === col.length - 1;
-              return (
-                <CardFace
-                  key={`${ci}-${cardIndex}`}
-                  card={card}
-                  hidden={hidden}
-                  highlight={getHighlight(
-                    isHintTabSrc(ci, cardIndex) ? 'source' : (isHintTabTgt(ci) && isTop) ? 'target' : undefined,
-                    isSelectedCard({ type: 'tableau', col: ci, cardIndex }, cardIndex),
-                  )}
-                  style={{ position: 'absolute', left: x, top: y }}
-                  onPointerDown={(e) => startInteraction(e, col.slice(cardIndex), { type: 'tableau', col: ci, cardIndex }, x, y)}
-                  onDoubleClick={isTop ? () => autoMove({ type: 'tableau', col: ci, cardIndex }, card) : undefined}
-                />
-              );
-            });
-          })}
-
-          {/* Drag overlay */}
-          {drag && drag.cards.map((card, i) => (
-            <CardFace
-              key={`drag-${i}`}
-              card={card}
-              style={{
-                position: 'absolute',
-                left: drag.x - drag.ox,
-                top: drag.y - drag.oy + i * FACE_UP_STEP,
-                zIndex: 1000 + i,
-                pointerEvents: 'none',
-                boxShadow: '3px 3px 8px rgba(0,0,0,0.4)',
-              }}
-            />
-          ))}
+          {renderStock()}
+          {renderWaste()}
+          {renderFoundations()}
+          {game.tableau.map((col, ci) => renderTableauColumn(col, ci))}
+          {drag && renderDragLayer(drag)}
 
         </div>
       </div>

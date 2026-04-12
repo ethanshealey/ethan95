@@ -1,24 +1,30 @@
 import { Card, CARD_W, CARD_H, SUIT_SYMBOLS, RANK_LABELS, isRed } from './utils/SolitaireUtils';
 
+export type Highlight = 'source' | 'target' | 'selected' | undefined;
+
+const CARD_SIZE: React.CSSProperties = { width: CARD_W, height: CARD_H };
+
+function highlightBoxShadow(highlight: Highlight): string | undefined {
+  if (highlight === 'source')   return '0 0 0 3px gold, 0 0 10px 4px rgba(255,215,0,0.7)';
+  if (highlight === 'target')   return '0 0 0 3px #00cc44, 0 0 10px 4px rgba(0,204,68,0.7)';
+  if (highlight === 'selected') return '0 0 0 3px #1a73e8, 0 0 10px 4px rgba(26,115,232,0.65)';
+  return undefined;
+}
+
 export function CardFace({ card, style, hidden, highlight, onPointerDown, onDoubleClick }: {
   card: Card;
   style?: React.CSSProperties;
   hidden?: boolean;
-  highlight?: 'source' | 'target' | 'selected';
+  highlight?: Highlight;
   onPointerDown?: (e: React.PointerEvent) => void;
   onDoubleClick?: () => void;
 }) {
   const color = isRed(card.suit) ? '#cc0000' : '#111';
   const sym = SUIT_SYMBOLS[card.suit];
   const lbl = RANK_LABELS[card.rank];
-  const boxShadow =
-    highlight === 'source'   ? '0 0 0 3px gold, 0 0 10px 4px rgba(255,215,0,0.7)'
-    : highlight === 'target'   ? '0 0 0 3px #00cc44, 0 0 10px 4px rgba(0,204,68,0.7)'
-    : highlight === 'selected' ? '0 0 0 3px #1a73e8, 0 0 10px 4px rgba(26,115,232,0.65)'
-    : undefined;
   return (
     <div
-      style={{ width: CARD_W, height: CARD_H, ...style, visibility: hidden ? 'hidden' : undefined, touchAction: onPointerDown ? 'none' : undefined }}
+      style={{ ...CARD_SIZE, ...style, visibility: hidden ? 'hidden' : undefined, touchAction: onPointerDown ? 'none' : undefined }}
       onPointerDown={onPointerDown}
       onDoubleClick={onDoubleClick}
     >
@@ -27,7 +33,7 @@ export function CardFace({ card, style, hidden, highlight, onPointerDown, onDoub
         backgroundColor: 'white', border: '1px solid #999', borderRadius: 4,
         boxSizing: 'border-box', color, overflow: 'hidden',
         cursor: onPointerDown ? 'grab' : 'default',
-        boxShadow,
+        boxShadow: highlightBoxShadow(highlight),
       }}>
         <div style={{ position: 'absolute', top: 2, left: 4, fontSize: 11, lineHeight: 1.2, fontFamily: 'sans-serif' }}>
           <div style={{ fontWeight: 'bold' }}>{lbl}</div>
@@ -47,7 +53,7 @@ export function CardFace({ card, style, hidden, highlight, onPointerDown, onDoub
 
 export function CardBack({ style }: { style?: React.CSSProperties }) {
   return (
-    <div style={{ width: CARD_W, height: CARD_H, ...style }}>
+    <div style={{ ...CARD_SIZE, ...style }}>
       <div style={{
         position: 'relative', width: '100%', height: '100%',
         backgroundColor: '#000080', border: '2px solid #0000cc',
@@ -71,7 +77,7 @@ export function EmptyPile({ style, label, highlight, onClick }: {
   return (
     <div
       style={{
-        width: CARD_W, height: CARD_H,
+        ...CARD_SIZE,
         border: highlight === 'target' ? '2px solid #00cc44' : '1px dashed rgba(255,255,255,0.3)',
         borderRadius: 4, boxSizing: 'border-box',
         display: 'flex', alignItems: 'center', justifyContent: 'center',

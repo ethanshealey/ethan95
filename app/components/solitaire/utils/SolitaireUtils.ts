@@ -185,17 +185,25 @@ function gameStateKey(game: GameState): string {
 }
 
 function generateMoves(game: GameState): GameState[] {
-  const results: GameState[] = [];
+  // Moves are bucketed by priority. For DFS the stack uses pop(), so items
+  // added LAST are explored FIRST. Buckets are concatenated lowest→highest
+  // priority so that the most productive moves sit at the top of the stack.
+  const toFoundation: GameState[] = [];  // highest – direct progress
+  const exposeHidden: GameState[] = [];  // second  – reveal a face-down card
+  const wasteToTab:   GameState[] = [];  // third   – waste top to tableau
+  const tabToTab:     GameState[] = [];  // fourth  – tableau shuffle (no expose)
+  const stockMoves:   GameState[] = [];  // fifth   – draw / reset stock
+  const foundToTab:   GameState[] = [];  // lowest  – un-win a card
 
-  // Draw from stock or reset
+  // Draw from stock or reset waste → stock
   if (game.stock.length > 0) {
-    results.push({
+    stockMoves.push({
       ...game,
       stock: game.stock.slice(0, -1),
       waste: [...game.waste, { ...game.stock[game.stock.length - 1], faceUp: true }],
     });
   } else if (game.waste.length > 0) {
-    results.push({
+    stockMoves.push({
       ...game,
       stock: [...game.waste].reverse().map(c => ({ ...c, faceUp: false })),
       waste: [],
@@ -206,20 +214,20 @@ function generateMoves(game: GameState): GameState[] {
   if (game.waste.length > 0) {
     const card = game.waste[game.waste.length - 1];
     const fi = canMoveToFoundation(card, game.foundations);
-    if (fi >= 0) results.push(applyMove(game, { type: 'waste' }, [card], 'foundation', fi));
+    if (fi >= 0) toFoundation.push(applyMove(game, { type: 'waste' }, [card], 'foundation', fi));
     for (let ci = 0; ci < 7; ci++)
       if (canMoveToTableau([card], game.tableau[ci]))
-        results.push(applyMove(game, { type: 'waste' }, [card], 'tableau', ci));
+        wasteToTab.push(applyMove(game, { type: 'waste' }, [card], 'tableau', ci));
   }
 
-  // Foundation top → tableau
+  // Foundation top → tableau (un-winning a card — lowest priority)
   for (let fi = 0; fi < 4; fi++) {
     const pile = game.foundations[fi];
     if (!pile.length) continue;
     const card = pile[pile.length - 1];
     for (let ci = 0; ci < 7; ci++)
       if (canMoveToTableau([card], game.tableau[ci]))
-        results.push(applyMove(game, { type: 'foundation', index: fi }, [card], 'tableau', ci));
+        foundToTab.push(applyMove(game, { type: 'foundation', index: fi }, [card], 'tableau', ci));
   }
 
   // Tableau → foundation or tableau
@@ -232,36 +240,48 @@ function generateMoves(game: GameState): GameState[] {
       if (si === col.length - 1) {
         const fi = canMoveToFoundation(cards[0], game.foundations);
         if (fi >= 0)
-          results.push(applyMove(game, { type: 'tableau', col: fromCol, cardIndex: si }, cards, 'foundation', fi));
+          toFoundation.push(applyMove(game, { type: 'tableau', col: fromCol, cardIndex: si }, cards, 'foundation', fi));
       }
-      for (let toCol = 0; toCol < 7; toCol++)
-        if (toCol !== fromCol && canMoveToTableau(cards, game.tableau[toCol]))
-          results.push(applyMove(game, { type: 'tableau', col: fromCol, cardIndex: si }, cards, 'tableau', toCol));
+      for (let toCol = 0; toCol < 7; toCol++) {
+        if (toCol !== fromCol && canMoveToTableau(cards, game.tableau[toCol])) {
+          const reveals = si === firstUp && firstUp > 0;
+          (reveals ? exposeHidden : tabToTab).push(
+            applyMove(game, { type: 'tableau', col: fromCol, cardIndex: si }, cards, 'tableau', toCol),
+          );
+        }
+      }
     }
   }
 
-  return results;
+  // Lowest priority first so highest ends up on top of the DFS stack
+  return [...foundToTab, ...stockMoves, ...tabToTab, ...wasteToTab, ...exposeHidden, ...toFoundation];
 }
 
-// BFS over all reachable states. Returns false only when the full reachable
+// DFS over all reachable states. Returns false only when the full reachable
 // state space has been explored with no winning path found. Returns true if a
 // win is found or the state space exceeds MAX_STATES (benefit of the doubt).
-const MAX_SOLVER_STATES = 2000;
+// DFS + priority-ordered generateMoves finds winning paths far faster than BFS.
+const MAX_SOLVER_STATES = 200_000;
 
 export function isSolvable(game: GameState): boolean {
+  if (game.foundations.every(f => f.length === 13)) return true;
+
   const visited = new Set<string>();
-  const queue: GameState[] = [game];
+  const stack: GameState[] = [game];
   visited.add(gameStateKey(game));
 
-  while (queue.length > 0) {
-    if (visited.size >= MAX_SOLVER_STATES) return true;
-    const state = queue.shift()!;
+  while (stack.length > 0) {
+    if (visited.size >= MAX_SOLVER_STATES) return true; // benefit of the doubt
+    const state = stack.pop()!;
     for (const next of generateMoves(state)) {
-      if (next.foundations.every(f => f.length === 13)) return true;
+      if (next.foundations.every(f => f.length === 13)) {
+        console.log('Valid solver path found with', visited.size, 'states explored');
+        return true;
+      }
       const key = gameStateKey(next);
       if (!visited.has(key)) {
         visited.add(key);
-        queue.push(next);
+        stack.push(next);
       }
     }
   }
