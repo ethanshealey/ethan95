@@ -15,7 +15,7 @@ interface MinesweeperWinnerProps {
 export default function MinesweeperWinner({ windowId, focusWindow, time, difficulty, token }: MinesweeperWinnerProps) {
 
   const { closeWindow } = useWindowManager();
-  
+
   const [text, setText] = useState<string>('');
 
   useEffect(() => {
@@ -29,11 +29,17 @@ export default function MinesweeperWinner({ windowId, focusWindow, time, difficu
       return
     }
 
+    const secret = process.env.NEXT_PUBLIC_SCORE_SECRET!;
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', key, enc.encode(token));
+    const secureToken = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
     // Save to DB
     const res: Response = await fetch('/api/minesweeper', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: text, time, difficulty, token }),
+      body: JSON.stringify({ username: text, time, difficulty, token, secureToken }),
     });
 
     const data = await res.json();

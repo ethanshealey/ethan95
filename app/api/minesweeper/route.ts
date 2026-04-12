@@ -55,20 +55,31 @@ export async function GET() {
   return Response.json(grouped);
 }
 
+function verifySecureToken(token: string, secureToken: string): boolean {
+  const expected = createHmac('sha256', process.env.SCORE_SECRET!).update(token).digest('base64url');
+  try {
+    return timingSafeEqual(Buffer.from(secureToken), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+}
+
 export async function PUT(request: Request) {
   const body = await request.json();
-  const { username, time, difficulty, token } = body as {
+  const { username, time, difficulty, token, secureToken } = body as {
     username?: string;
     time?: number;
     difficulty?: string;
     token?: string;
+    secureToken?: string;
   };
 
   if (
     !username?.trim() ||
     typeof time !== 'number' || time < 1 || time > 999 ||
     !DIFFICULTIES.includes(difficulty as typeof DIFFICULTIES[number]) ||
-    !token || !verifyToken(token, time, difficulty!)
+    !token || !verifyToken(token, time, difficulty!) ||
+    !secureToken || !verifySecureToken(token, secureToken)
   ) {
     return Response.json({ error: 'Invalid submission' }, { status: 400 });
   }
