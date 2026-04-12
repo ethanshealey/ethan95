@@ -435,7 +435,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
 
     // ── Restart Room (host only) ─────────────────────────────────────────────
     const handleRestartRoom = useCallback(async () => {
-        if (!roomId || playerRole !== 'host') return;
+        if (!roomId || !playerRole) return;
         const { grid: newGrid } = generateGrid(difficulty);
         const initRevealed = blankRevealed(difficulty);
         const hostState = {
@@ -447,6 +447,15 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         const sharedState = modeRef.current === 'coop' ? { ...hostState } : undefined;
         await restartRoom(roomId, newGrid, difficulty, hostState, sharedState);
     }, [roomId, playerRole, difficulty]);
+
+    // ── New game — restarts the room if in one, otherwise single-player ─────
+    const handleNewGame = useCallback((diff?: Difficulty) => {
+        if (roomId) {
+            handleRestartRoom();
+        } else {
+            startNewGame(diff);
+        }
+    }, [roomId, playerRole, handleRestartRoom, startNewGame]);
 
     // ── Status bar label ─────────────────────────────────────────────────────
     const statusBarLabel = (() => {
@@ -461,7 +470,6 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         if (!opponentStats) return 'Waiting for opponent...';
         if (opponentStats.result === 'won')  return 'Opponent won!';
         if (opponentStats.result === 'lost') return 'Opponent hit a mine!';
-        if ((won || lostCell) && playerRole === 'guest') return 'Waiting for host to restart...';
         const pct = grid.length ? `${progressPct(grid, JSON.parse(opponentStats.revealed ?? JSON.stringify(blankRevealed(difficulty))))}%` : '';
         return `Opponent - ${opponentStats.timer.toString().padStart(3, '0')}s${pct ? ` · ${pct} cleared` : ''}`;
     })();
@@ -478,7 +486,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
                     <Button variant='menu' size='sm' onClick={() => setShowDifficultyMenu(v => !v)}>Game</Button>
                     {showDifficultyMenu && (
                         <MenuList style={{ position: 'absolute', top: '100%', left: 0, zIndex: 1000 }}>
-                            <MenuListItem onClick={() => startNewGame()} style={{ cursor: 'pointer' }}>New</MenuListItem>
+                            <MenuListItem onClick={() => handleNewGame()} style={{ cursor: 'pointer' }}>New</MenuListItem>
                             <Separator />
                             {(['beginner', 'intermediate', 'expert'] as Difficulty[]).map(d => (
                                 <MenuListItem
@@ -521,7 +529,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
                 <Frame variant='well' className='minesweeper-header-frame'>
                     <div className='minesweeper-header'>
                         <div className='flag-count'><span>{flagCount.toString().padStart(3, '0')}</span></div>
-                        <Button className='face' onClick={() => startNewGame()}>
+                        <Button className='face' onClick={() => handleNewGame()}>
                             <img src={lostCell === null ? SMILE : DEAD} />
                         </Button>
                         <div className='timer'><span>{timer.toString().padStart(3, '0')}</span></div>
@@ -547,7 +555,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
                             style={{ imageRendering: 'pixelated' }}
                         />
                         <span style={{ flex: 1 }}>{statusBarLabel}</span>
-                        {playerRole === 'host' && (won || lostCell) && (
+                        {playerRole && (won || lostCell) && (
                             <button
                                 onClick={handleRestartRoom}
                                 style={{ fontSize: '9px', cursor: 'pointer', padding: '0 4px', height: '16px', background: '#c0c0c0', border: '1px solid #808080' }}

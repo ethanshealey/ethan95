@@ -11,13 +11,14 @@
 
         ".write": "!data.exists()",
 
-        "grid":       { ".write": "!data.exists()" },
-        "difficulty": { ".write": "!data.exists()" },
+        "grid":       { ".write": "!data.exists() || data.parent().child('status').val() === 'playing'" },
+        "difficulty": { ".write": "!data.exists() || data.parent().child('status').val() === 'playing'" },
         "mode":       { ".write": "!data.exists()" },
         "createdAt":  { ".write": "!data.exists()" },
+        "round":      { ".write": "!data.exists() || data.parent().child('status').val() === 'playing'" },
 
         "status": {
-          ".write": "!data.exists() || (data.val() === 'waiting' && newData.val() === 'playing')",
+          ".write": "!data.exists() || (data.val() === 'waiting' && newData.val() === 'playing') || (data.val() === 'playing' && newData.val() === 'playing')",
           ".validate": "newData.val() === 'waiting' || newData.val() === 'playing' || newData.val() === 'finished'"
         },
 
@@ -27,7 +28,7 @@
         },
 
         "guest": {
-          ".write": "(!data.exists() && data.parent().child('status').val() === 'waiting') || (data.exists() && data.parent().child('status').val() === 'playing')",
+          ".write": "(!data.exists() && data.parent().child('status').val() === 'waiting') || data.parent().child('status').val() === 'playing'",
           ".validate": "newData.child('revealed').isString() && newData.child('flagCount').isNumber() && newData.child('flagCount').val() >= 0 && newData.child('timer').isNumber() && newData.child('timer').val() >= 0 && newData.child('timer').val() <= 999 && (newData.child('result').val() === 'playing' || newData.child('result').val() === 'won' || newData.child('result').val() === 'lost')"
         },
 
