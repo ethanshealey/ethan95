@@ -24,7 +24,6 @@ export default function MinesweeperWinner({ windowId, focusWindow, time, difficu
   }, [])
 
   const submit = async () => {
-    console.log(time, difficulty)
     if(!time || !difficulty?.trim() || !token) {
       alert('No cheating ;)')
       return

@@ -38,7 +38,6 @@ export default function MinesweeperRecords({ windowId, focusWindow, defaultConte
 
     const sort = (arr: Score[]) => [...arr].sort((a, b) => a.time - b.time);
     setScores({ beginner: sort(json.beginner), intermediate: sort(json.intermediate), expert: sort(json.expert) });
-    console.log(json)
   }
 
   const renderSection = (label: string, list: Score[] | undefined) => (

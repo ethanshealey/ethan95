@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const params = {
         latitude: coords.latitude,
         longitude: coords.longitude,
-        daily: ["temperature_2m_max", "temperature_2m_min"],
+        daily: ["temperature_2m_max", "temperature_2m_min", "weather_code"],
         current: ["temperature_2m", "is_day", "precipitation", "rain", "showers", "weather_code"],
         temperature_unit: "fahrenheit",
         timezone: coords.timezone,
@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
             ),
             temperature_2m_max: daily.variables(0)!.valuesArray(),
             temperature_2m_min: daily.variables(1)!.valuesArray(),
+            weather_code: daily.variables(2)!.valuesArray(),
         },
     };
 

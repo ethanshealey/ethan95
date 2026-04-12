@@ -47,7 +47,7 @@ $screen-background:#121010;
     left:0;
     bottom:0;
     right:0;
-    background:linear-gradient(color.adjust($screen-background,$alpha:-1) 50%, color.adjust(color.adjust($screen-background,$lightness:-10%),$alpha:-0.75) 50%), linear-gradient(90deg,color.adjust(#ff0000,$alpha:-0.94),color.adjust(#00ff00,$alpha:-0.98),color.adjust(#0000ff,$alpha:-0.94));
+    background:linear-gradient(color.adjust($screen-background,$alpha:-1) 50%, color.adjust(color.adjust($screen-background,$lightness:-10%),$alpha:-0.88) 50%), linear-gradient(90deg,color.adjust(#ff0000,$alpha:-0.97),color.adjust(#00ff00,$alpha:-0.99),color.adjust(#0000ff,$alpha:-0.97));
     z-index:2;
     background-size:100% 2px, 3px 100%;
     pointer-events:none;

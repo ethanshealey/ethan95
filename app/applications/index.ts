@@ -157,14 +157,13 @@ export const APPLICATIONS: RegisteredApp[] = [
     icon: Icons.APPLICATION_HOURGLASS_SMALL_COOL,
     component: Run,
     fitContent: true,
-  }
-
-  // {
-  //   id: 'weather',
-  //   name: 'Weather',
-  //   icon: Icons.WORLD,
-  //   component: Weather,
-  // },
+  },
+  {
+    id: 'weather',
+    name: 'Weather',
+    icon: Icons.WORLD,
+    component: Weather,
+  },
 ];
 
 export function getAppById(id: string): RegisteredApp | undefined {
