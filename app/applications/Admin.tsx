@@ -10,7 +10,7 @@ interface AdminProps {
 
 type DocData = Record<string, unknown>;
 
-const COLLECTIONS = ['minesweeper', 'albums'] as const;
+const COLLECTIONS = ['minesweeper', 'albums', 'solitaire'] as const;
 type Collection = (typeof COLLECTIONS)[number];
 
 // Fields shown read-only (not editable)

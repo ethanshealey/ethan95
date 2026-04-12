@@ -2,7 +2,7 @@ import { db } from '@/lib/firebase';
 import { collection as firestoreCollection, getDocs, addDoc, Timestamp } from 'firebase/firestore';
 import { verifySessionToken } from '@/lib/admin-auth';
 
-const ALLOWED_COLLECTIONS = ['minesweeper', 'albums'] as const;
+const ALLOWED_COLLECTIONS = ['minesweeper', 'albums', 'solitaire'] as const;
 
 function getToken(request: Request): string | null {
   const auth = request.headers.get('Authorization');
