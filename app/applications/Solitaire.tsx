@@ -4,17 +4,30 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Button, Frame, MenuList, MenuListItem, Toolbar } from 'react95';
 import {
   Card, GameState, Source, HintResult,
-  SUIT_ORDER, SUIT_SYMBOLS, FACE_UP_STEP, BOARD_W, BOARD_H, PADDING, TABLEAU_Y, CARD_W,
+  SUIT_ORDER, SUIT_SYMBOLS, FACE_UP_STEP, BOARD_W, BOARD_H, PADDING, TABLEAU_Y, CARD_W, CARD_H,
   dealGame, canMoveToTableau, canMoveToFoundation,
   getFoundationIndex, applyMove, colX, tableauCardY, findHint, isSolvable,
 } from '../components/solitaire/utils/SolitaireUtils';
 import { CardFace, CardBack, EmptyPile } from '../components/solitaire/SolitaireCard';
+
+const DRAG_THRESHOLD = 8; // px of movement before drag activates
 
 type DragState = {
   cards: Card[];
   source: Source;
   x: number; y: number;
   ox: number; oy: number;
+} | null;
+
+type SelectedState = { cards: Card[]; source: Source } | null;
+
+type PendingInteraction = {
+  cards: Card[];
+  source: Source;
+  cardX: number;
+  cardY: number;
+  startBX: number; // board-space
+  startBY: number;
 } | null;
 
 interface SolitaireProps {
@@ -25,16 +38,32 @@ interface SolitaireProps {
 export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
   const [game, setGame] = useState<GameState>(() => dealGame());
   const [drag, setDragState] = useState<DragState>(null);
+  const [selected, setSelected] = useState<SelectedState>(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [scale, setScale] = useState(1);
+
   const menuRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState>(null);
+  const pendingRef = useRef<PendingInteraction>(null);
+  const scaleRef = useRef(1);
+  const selectedRef = useRef<SelectedState>(null);
+  scaleRef.current = scale;
+  selectedRef.current = selected;
+
   const [hint, setHint] = useState<HintResult | null>(null);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const setDrag = useCallback((d: DragState) => {
-    dragRef.current = d;
-    setDragState(d);
+  // Responsive scaling
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const obs = new ResizeObserver(entries => {
+      const w = entries[0].contentRect.width;
+      setScale(Math.min(1, w / BOARD_W));
+    });
+    obs.observe(containerRef.current);
+    return () => obs.disconnect();
   }, []);
 
   const clearHint = useCallback(() => {
@@ -54,84 +83,195 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [showMenu]);
 
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!dragRef.current || !boardRef.current) return;
-      const rect = boardRef.current.getBoundingClientRect();
-      dragRef.current = { ...dragRef.current, x: e.clientX - rect.left, y: e.clientY - rect.top };
-      setDragState({ ...dragRef.current });
-    };
+  // ─── Drop logic ────────────────────────────────────────────────────────────
+  // Stored in a ref so document handlers always call the latest version
+  const dropCardsRef = useRef<(d: NonNullable<DragState>, bx: number, by: number) => void>(() => {});
+  dropCardsRef.current = (d: NonNullable<DragState>, bx: number, by: number) => {
+    const cardLeft = bx - d.ox;
+    const cardTop  = by - d.oy;
+    const cardRight = cardLeft + CARD_W;
 
-    const onUp = (e: MouseEvent) => {
-      const d = dragRef.current;
-      dragRef.current = null;
-      setDragState(null);
-      if (!d || !boardRef.current) return;
+    const candidates = Array.from({ length: 7 }, (_, ci) => ({
+      ci,
+      overlap: Math.max(0, Math.min(cardRight, colX(ci) + CARD_W) - Math.max(cardLeft, colX(ci))),
+    })).filter(c => c.overlap > 0).sort((a, b) => b.overlap - a.overlap);
 
-      const rect = boardRef.current.getBoundingClientRect();
-      const bx = e.clientX - rect.left;
-      const by = e.clientY - rect.top;
-      const cardLeft = bx - d.ox;
-      const cardTop = by - d.oy;
-      const cardRight = cardLeft + CARD_W;
-
-      // Find all columns the dragged card overlaps, sorted by most overlap first
-      const candidates = Array.from({ length: 7 }, (_, ci) => ({
-        ci,
-        overlap: Math.max(0, Math.min(cardRight, colX(ci) + CARD_W) - Math.max(cardLeft, colX(ci))),
-      })).filter(c => c.overlap > 0).sort((a, b) => b.overlap - a.overlap);
-
-      if (candidates.length === 0) return;
-
-      // Foundation zone: single card dropped in foundation row
-      if (d.cards.length === 1 && cardTop >= PADDING && cardTop < TABLEAU_Y) {
-        const fc = candidates.find(c => c.ci >= 3 && c.ci <= 6);
-        if (fc) {
-          const fi = fc.ci - 3;
+    setGame(g => {
+      // Foundation: single card, match by suit, generous vertical zone
+      if (d.cards.length === 1) {
+        const inFoundationZone = cardTop < TABLEAU_Y + 20;
+        const overFoundationCols = candidates.some(c => c.ci >= 3);
+        if (inFoundationZone || overFoundationCols) {
           const card = d.cards[0];
-          setGame(g => {
-            if (getFoundationIndex(card.suit) !== fi) return g;
-            const pile = g.foundations[fi];
-            if (pile.length === 0 && card.rank !== 1) return g;
-            if (pile.length > 0 && pile[pile.length - 1].rank !== card.rank - 1) return g;
+          const fi = getFoundationIndex(card.suit);
+          const pile = g.foundations[fi];
+          if (
+            (pile.length === 0 && card.rank === 1) ||
+            (pile.length > 0 && pile[pile.length - 1].rank === card.rank - 1)
+          ) {
             return applyMove(g, d.source, d.cards, 'foundation', fi);
-          });
+          }
         }
-        return;
       }
 
-      // Tableau: try each overlapping column in order, apply first valid move
+      // Tableau
+      for (const { ci } of candidates) {
+        if (canMoveToTableau(d.cards, g.tableau[ci])) {
+          return applyMove(g, d.source, d.cards, 'tableau', ci);
+        }
+      }
+      return g;
+    });
+  };
+
+  // ─── Tap logic ─────────────────────────────────────────────────────────────
+  const handleTapRef = useRef<(cards: Card[], source: Source) => void>(() => {});
+  handleTapRef.current = (tapCards: Card[], tapSource: Source) => {
+    const prev = selectedRef.current;
+    if (prev) {
+      const destCol = tapSource.type === 'tableau' ? tapSource.col : -1;
+      const destFi  = tapSource.type === 'foundation' ? tapSource.index : -1;
       setGame(g => {
-        for (const { ci } of candidates) {
-          if (canMoveToTableau(d.cards, g.tableau[ci])) {
-            return applyMove(g, d.source, d.cards, 'tableau', ci);
+        if (destFi >= 0 && prev.cards.length === 1) {
+          const card = prev.cards[0];
+          if (getFoundationIndex(card.suit) === destFi) {
+            const pile = g.foundations[destFi];
+            if (
+              (pile.length === 0 && card.rank === 1) ||
+              (pile.length > 0 && pile[pile.length - 1].rank === card.rank - 1)
+            ) return applyMove(g, prev.source, prev.cards, 'foundation', destFi);
           }
+        }
+        if (destCol >= 0 && canMoveToTableau(prev.cards, g.tableau[destCol])) {
+          return applyMove(g, prev.source, prev.cards, 'tableau', destCol);
         }
         return g;
       });
+      setSelected(null);
+    } else {
+      setSelected({ cards: tapCards, source: tapSource });
+    }
+  };
+
+  const handleEmptyTapRef = useRef<(type: 'tableau' | 'foundation', index: number) => void>(() => {});
+  handleEmptyTapRef.current = (targetType: 'tableau' | 'foundation', targetIndex: number) => {
+    const prev = selectedRef.current;
+    if (!prev) return;
+    setGame(g => {
+      if (targetType === 'foundation' && prev.cards.length === 1) {
+        const card = prev.cards[0];
+        if (getFoundationIndex(card.suit) === targetIndex) {
+          const pile = g.foundations[targetIndex];
+          if (
+            (pile.length === 0 && card.rank === 1) ||
+            (pile.length > 0 && pile[pile.length - 1].rank === card.rank - 1)
+          ) return applyMove(g, prev.source, prev.cards, 'foundation', targetIndex);
+        }
+      }
+      if (targetType === 'tableau' && canMoveToTableau(prev.cards, g.tableau[targetIndex])) {
+        return applyMove(g, prev.source, prev.cards, 'tableau', targetIndex);
+      }
+      return g;
+    });
+    setSelected(null);
+  };
+
+  // ─── Document-level pointer events (mouse + touch) ──────────────────────────
+  useEffect(() => {
+    const getBoardCoords = (clientX: number, clientY: number) => {
+      if (!boardRef.current) return null;
+      const rect = boardRef.current.getBoundingClientRect();
+      const s = scaleRef.current;
+      return { bx: (clientX - rect.left) / s, by: (clientY - rect.top) / s };
+    };
+
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      const isTouch = 'touches' in e;
+      const src = isTouch
+        ? (e as TouchEvent).touches[0]
+        : (e as MouseEvent);
+      if (!src) return;
+
+      const coords = getBoardCoords(src.clientX, src.clientY);
+      if (!coords) return;
+      const { bx, by } = coords;
+
+      if (!dragRef.current && pendingRef.current) {
+        const dx = bx - pendingRef.current.startBX;
+        const dy = by - pendingRef.current.startBY;
+        if (Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+          // Activate drag
+          const p = pendingRef.current;
+          const newDrag: DragState = {
+            cards: p.cards, source: p.source,
+            x: bx, y: by,
+            ox: p.startBX - p.cardX,
+            oy: p.startBY - p.cardY,
+          };
+          dragRef.current = newDrag;
+          setDragState(newDrag);
+          setSelected(null);
+          if (isTouch) (e as TouchEvent).preventDefault();
+        }
+      } else if (dragRef.current) {
+        if (isTouch) (e as TouchEvent).preventDefault();
+        dragRef.current = { ...dragRef.current, x: bx, y: by };
+        setDragState({ ...dragRef.current });
+      }
+    };
+
+    const onUp = (e: MouseEvent | TouchEvent) => {
+      const pending = pendingRef.current;
+      const d = dragRef.current;
+      pendingRef.current = null;
+      dragRef.current = null;
+      setDragState(null);
+
+      const isTouch = 'changedTouches' in e;
+      const src = isTouch
+        ? (e as TouchEvent).changedTouches[0]
+        : (e as MouseEvent);
+      if (!src) return;
+
+      if (d) {
+        const coords = getBoardCoords(src.clientX, src.clientY);
+        if (coords) dropCardsRef.current(d, coords.bx, coords.by);
+      } else if (pending) {
+        handleTapRef.current(pending.cards, pending.source);
+      }
     };
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onUp);
     return () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onUp);
     };
   }, []);
 
-  const startDrag = useCallback((
-    e: React.MouseEvent, cards: Card[], source: Source, cardX: number, cardY: number,
+  const startInteraction = useCallback((
+    e: React.MouseEvent | React.TouchEvent,
+    cards: Card[], source: Source, cardX: number, cardY: number,
   ) => {
     e.preventDefault();
     e.stopPropagation();
     if (!boardRef.current) return;
+    const isTouch = 'touches' in e;
+    const clientX = isTouch ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = isTouch ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY;
     const rect = boardRef.current.getBoundingClientRect();
-    const bx = e.clientX - rect.left;
-    const by = e.clientY - rect.top;
-    setDrag({ cards, source, x: bx, y: by, ox: bx - cardX, oy: by - cardY });
-  }, [setDrag]);
+    const s = scaleRef.current;
+    const bx = (clientX - rect.left) / s;
+    const by = (clientY - rect.top) / s;
+    pendingRef.current = { cards, source, cardX, cardY, startBX: bx, startBY: by };
+  }, []);
 
   const clickStock = useCallback(() => {
+    setSelected(null);
     setGame(g => {
       const ng = { ...g, stock: [...g.stock], waste: [...g.waste] };
       if (ng.stock.length > 0) {
@@ -165,6 +305,16 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     return false;
   };
 
+  const isSelectedCard = (source: Source, cardIndex: number): boolean => {
+    const s = selected;
+    if (!s || drag) return false;
+    if (s.source.type === 'tableau' && source.type === 'tableau')
+      return s.source.col === source.col && cardIndex >= s.source.cardIndex;
+    if (s.source.type === 'waste' && source.type === 'waste') return true;
+    if (s.source.type === 'foundation' && source.type === 'foundation') return s.source.index === source.index;
+    return false;
+  };
+
   const hintSrc = hint?.source;
   const isHintWasteSrc = hintSrc?.type === 'waste';
   const isHintTabSrc = (ci: number, idx: number) =>
@@ -173,6 +323,11 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     hintSrc?.type === 'foundation' && hintSrc.index === fi;
   const isHintTabTgt = (ci: number) => hint?.toType === 'tableau' && hint.toIndex === ci;
   const isHintFoundTgt = (fi: number) => hint?.toType === 'foundation' && hint.toIndex === fi;
+
+  const getHighlight = (
+    base: 'source' | 'target' | undefined,
+    isSel: boolean,
+  ): 'source' | 'target' | 'selected' | undefined => isSel ? 'selected' : base;
 
   return (
     <div className="app-content" onClick={(e) => { e.stopPropagation(); focusWindow(windowId); }}>
@@ -183,7 +338,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
             <MenuList style={{ position: 'absolute', top: '100%', left: 0, zIndex: 2000 }}>
               <MenuListItem
                 style={{ cursor: 'pointer' }}
-                onClick={() => { setGame(dealGame()); setDrag(null); setShowMenu(false); }}
+                onClick={() => { setGame(dealGame()); setDragState(null); setSelected(null); setShowMenu(false); }}
               >
                 New
               </MenuListItem>
@@ -202,117 +357,152 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
         )}
       </Toolbar>
 
+      {/* Responsive wrapper — shrinks board to fit available width */}
       <div
-        ref={boardRef}
+        ref={containerRef}
         style={{
-          position: 'relative',
-          backgroundColor: '#008000',
-          width: BOARD_W,
-          height: BOARD_H,
-          cursor: drag ? 'grabbing' : 'default',
+          width: '100%',
+          overflow: 'hidden',
+          height: BOARD_H * scale,
+          touchAction: 'none',
+          userSelect: 'none',
         }}
       >
-        {/* Stock */}
         <div
-          style={{ position: 'absolute', left: colX(0), top: PADDING, cursor: 'pointer' }}
-          onClick={clickStock}
+          ref={boardRef}
+          style={{
+            position: 'relative',
+            backgroundColor: '#008000',
+            width: BOARD_W,
+            height: BOARD_H,
+            cursor: drag ? 'grabbing' : 'default',
+            transformOrigin: 'top left',
+            transform: scale < 1 ? `scale(${scale})` : undefined,
+          }}
         >
-          {game.stock.length > 0 ? <CardBack /> : <EmptyPile label="↺" />}
-        </div>
+          {/* Stock */}
+          <div
+            style={{ position: 'absolute', left: colX(0), top: PADDING, cursor: 'pointer' }}
+            onClick={clickStock}
+          >
+            {game.stock.length > 0 ? <CardBack /> : <EmptyPile label="↺" />}
+          </div>
 
-        {/* Waste */}
-        {game.waste.length > 0 ? (
-          <CardFace
-            card={game.waste[game.waste.length - 1]}
-            hidden={isDraggedCard({ type: 'waste' }, 0)}
-            highlight={isHintWasteSrc ? 'source' : undefined}
-            style={{ position: 'absolute', left: colX(1), top: PADDING }}
-            onMouseDown={(e) => startDrag(e, [game.waste[game.waste.length - 1]], { type: 'waste' }, colX(1), PADDING)}
-            onDoubleClick={() => autoMove({ type: 'waste' }, game.waste[game.waste.length - 1])}
-          />
-        ) : (
-          <EmptyPile style={{ position: 'absolute', left: colX(1), top: PADDING }} />
-        )}
-
-        {/* Foundations */}
-        {SUIT_ORDER.map((suit, fi) => {
-          const pile = game.foundations[fi];
-          const topCard = pile.length > 0 ? pile[pile.length - 1] : null;
-          const x = colX(3 + fi);
-          return topCard ? (
+          {/* Waste */}
+          {game.waste.length > 0 ? (
             <CardFace
-              key={suit}
-              card={topCard}
-              hidden={isDraggedCard({ type: 'foundation', index: fi }, 0)}
-              highlight={isHintFoundSrc(fi) ? 'source' : isHintFoundTgt(fi) ? 'target' : undefined}
-              style={{ position: 'absolute', left: x, top: PADDING }}
-              onMouseDown={(e) => startDrag(e, [topCard], { type: 'foundation', index: fi }, x, PADDING)}
+              card={game.waste[game.waste.length - 1]}
+              hidden={isDraggedCard({ type: 'waste' }, 0)}
+              highlight={getHighlight(
+                isHintWasteSrc ? 'source' : undefined,
+                isSelectedCard({ type: 'waste' }, 0),
+              )}
+              style={{ position: 'absolute', left: colX(1), top: PADDING }}
+              onMouseDown={(e) => startInteraction(e, [game.waste[game.waste.length - 1]], { type: 'waste' }, colX(1), PADDING)}
+              onTouchStart={(e) => startInteraction(e, [game.waste[game.waste.length - 1]], { type: 'waste' }, colX(1), PADDING)}
+              onDoubleClick={() => autoMove({ type: 'waste' }, game.waste[game.waste.length - 1])}
             />
           ) : (
-            <EmptyPile key={suit} label={SUIT_SYMBOLS[suit]} highlight={isHintFoundTgt(fi) ? 'target' : undefined} style={{ position: 'absolute', left: x, top: PADDING }} />
-          );
-        })}
+            <EmptyPile style={{ position: 'absolute', left: colX(1), top: PADDING }} />
+          )}
 
-        {/* Tableau */}
-        {game.tableau.map((col, ci) => {
-          const x = colX(ci);
-          if (col.length === 0) {
-            return <EmptyPile key={`empty-${ci}`} highlight={isHintTabTgt(ci) ? 'target' : undefined} style={{ position: 'absolute', left: x, top: TABLEAU_Y }} />;
-          }
-          return col.map((card, cardIndex) => {
-            const y = tableauCardY(col, cardIndex);
-            if (!card.faceUp) {
-              return <CardBack key={`${ci}-${cardIndex}`} style={{ position: 'absolute', left: x, top: y }} />;
-            }
-            const hidden = isDraggedCard({ type: 'tableau', col: ci, cardIndex }, cardIndex);
-            const isTop = cardIndex === col.length - 1;
-            return (
+          {/* Foundations */}
+          {SUIT_ORDER.map((suit, fi) => {
+            const pile = game.foundations[fi];
+            const topCard = pile.length > 0 ? pile[pile.length - 1] : null;
+            const x = colX(3 + fi);
+            return topCard ? (
               <CardFace
-                key={`${ci}-${cardIndex}`}
-                card={card}
-                hidden={hidden}
-                highlight={
-                  isHintTabSrc(ci, cardIndex) ? 'source'
-                  : (isHintTabTgt(ci) && isTop) ? 'target'
-                  : undefined
-                }
-                style={{ position: 'absolute', left: x, top: y }}
-                onMouseDown={(e) => startDrag(e, col.slice(cardIndex), { type: 'tableau', col: ci, cardIndex }, x, y)}
-                onDoubleClick={isTop ? () => autoMove({ type: 'tableau', col: ci, cardIndex }, card) : undefined}
+                key={suit}
+                card={topCard}
+                hidden={isDraggedCard({ type: 'foundation', index: fi }, 0)}
+                highlight={getHighlight(
+                  isHintFoundSrc(fi) ? 'source' : isHintFoundTgt(fi) ? 'target' : undefined,
+                  isSelectedCard({ type: 'foundation', index: fi }, 0),
+                )}
+                style={{ position: 'absolute', left: x, top: PADDING }}
+                onMouseDown={(e) => startInteraction(e, [topCard], { type: 'foundation', index: fi }, x, PADDING)}
+                onTouchStart={(e) => startInteraction(e, [topCard], { type: 'foundation', index: fi }, x, PADDING)}
+              />
+            ) : (
+              <EmptyPile
+                key={suit}
+                label={SUIT_SYMBOLS[suit]}
+                highlight={isHintFoundTgt(fi) ? 'target' : undefined}
+                style={{ position: 'absolute', left: x, top: PADDING }}
+                onClick={() => handleEmptyTapRef.current('foundation', fi)}
               />
             );
-          });
-        })}
+          })}
 
-        {/* Drag overlay */}
-        {drag && drag.cards.map((card, i) => (
-          <CardFace
-            key={`drag-${i}`}
-            card={card}
-            style={{
-              position: 'absolute',
-              left: drag.x - drag.ox,
-              top: drag.y - drag.oy + i * FACE_UP_STEP,
-              zIndex: 1000 + i,
-              pointerEvents: 'none',
-              boxShadow: '3px 3px 8px rgba(0,0,0,0.4)',
-            }}
-          />
-        ))}
+          {/* Tableau */}
+          {game.tableau.map((col, ci) => {
+            const x = colX(ci);
+            if (col.length === 0) {
+              return (
+                <EmptyPile
+                  key={`empty-${ci}`}
+                  highlight={isHintTabTgt(ci) ? 'target' : undefined}
+                  style={{ position: 'absolute', left: x, top: TABLEAU_Y }}
+                  onClick={() => handleEmptyTapRef.current('tableau', ci)}
+                />
+              );
+            }
+            return col.map((card, cardIndex) => {
+              const y = tableauCardY(col, cardIndex);
+              if (!card.faceUp) {
+                return <CardBack key={`${ci}-${cardIndex}`} style={{ position: 'absolute', left: x, top: y }} />;
+              }
+              const hidden = isDraggedCard({ type: 'tableau', col: ci, cardIndex }, cardIndex);
+              const isTop = cardIndex === col.length - 1;
+              return (
+                <CardFace
+                  key={`${ci}-${cardIndex}`}
+                  card={card}
+                  hidden={hidden}
+                  highlight={getHighlight(
+                    isHintTabSrc(ci, cardIndex) ? 'source' : (isHintTabTgt(ci) && isTop) ? 'target' : undefined,
+                    isSelectedCard({ type: 'tableau', col: ci, cardIndex }, cardIndex),
+                  )}
+                  style={{ position: 'absolute', left: x, top: y }}
+                  onMouseDown={(e) => startInteraction(e, col.slice(cardIndex), { type: 'tableau', col: ci, cardIndex }, x, y)}
+                  onTouchStart={(e) => startInteraction(e, col.slice(cardIndex), { type: 'tableau', col: ci, cardIndex }, x, y)}
+                  onDoubleClick={isTop ? () => autoMove({ type: 'tableau', col: ci, cardIndex }, card) : undefined}
+                />
+              );
+            });
+          })}
 
-        {/* Win overlay */}
-        {won && (
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 2000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.45)',
-          }}>
-            <Frame variant='window' style={{ padding: '24px 32px', textAlign: 'center' }}>
-              <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>You Win!</h2>
-              <Button onClick={() => setGame(dealGame())}>Play Again</Button>
-            </Frame>
-          </div>
-        )}
+          {/* Drag overlay */}
+          {drag && drag.cards.map((card, i) => (
+            <CardFace
+              key={`drag-${i}`}
+              card={card}
+              style={{
+                position: 'absolute',
+                left: drag.x - drag.ox,
+                top: drag.y - drag.oy + i * FACE_UP_STEP,
+                zIndex: 1000 + i,
+                pointerEvents: 'none',
+                boxShadow: '3px 3px 8px rgba(0,0,0,0.4)',
+              }}
+            />
+          ))}
+
+          {/* Win overlay */}
+          {won && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 2000,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: 'rgba(0,0,0,0.45)',
+            }}>
+              <Frame variant='window' style={{ padding: '24px 32px', textAlign: 'center' }}>
+                <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>You Win!</h2>
+                <Button onClick={() => { setGame(dealGame()); setSelected(null); }}>Play Again</Button>
+              </Frame>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

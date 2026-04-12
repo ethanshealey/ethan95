@@ -1,32 +1,35 @@
 import { Card, CARD_W, CARD_H, SUIT_SYMBOLS, RANK_LABELS, isRed } from './utils/SolitaireUtils';
 
-export function CardFace({ card, style, hidden, highlight, onMouseDown, onDoubleClick }: {
+export function CardFace({ card, style, hidden, highlight, onMouseDown, onTouchStart, onDoubleClick }: {
   card: Card;
   style?: React.CSSProperties;
   hidden?: boolean;
-  highlight?: 'source' | 'target';
+  highlight?: 'source' | 'target' | 'selected';
   onMouseDown?: (e: React.MouseEvent) => void;
+  onTouchStart?: (e: React.TouchEvent) => void;
   onDoubleClick?: () => void;
 }) {
   const color = isRed(card.suit) ? '#cc0000' : '#111';
   const sym = SUIT_SYMBOLS[card.suit];
   const lbl = RANK_LABELS[card.rank];
+  const boxShadow =
+    highlight === 'source'   ? '0 0 0 3px gold, 0 0 10px 4px rgba(255,215,0,0.7)'
+    : highlight === 'target'   ? '0 0 0 3px #00cc44, 0 0 10px 4px rgba(0,204,68,0.7)'
+    : highlight === 'selected' ? '0 0 0 3px #1a73e8, 0 0 10px 4px rgba(26,115,232,0.65)'
+    : undefined;
   return (
     <div
       style={{ width: CARD_W, height: CARD_H, ...style, visibility: hidden ? 'hidden' : undefined }}
       onMouseDown={onMouseDown}
+      onTouchStart={onTouchStart}
       onDoubleClick={onDoubleClick}
     >
       <div style={{
         position: 'relative', width: '100%', height: '100%',
         backgroundColor: 'white', border: '1px solid #999', borderRadius: 4,
         boxSizing: 'border-box', color, overflow: 'hidden',
-        cursor: onMouseDown ? 'grab' : 'default',
-        boxShadow: highlight === 'source'
-          ? '0 0 0 3px gold, 0 0 10px 4px rgba(255,215,0,0.7)'
-          : highlight === 'target'
-          ? '0 0 0 3px #00cc44, 0 0 10px 4px rgba(0,204,68,0.7)'
-          : undefined,
+        cursor: onMouseDown || onTouchStart ? 'grab' : 'default',
+        boxShadow,
       }}>
         <div style={{ position: 'absolute', top: 2, left: 4, fontSize: 11, lineHeight: 1.2, fontFamily: 'sans-serif' }}>
           <div style={{ fontWeight: 'bold' }}>{lbl}</div>
@@ -61,17 +64,26 @@ export function CardBack({ style }: { style?: React.CSSProperties }) {
   );
 }
 
-export function EmptyPile({ style, label, highlight }: { style?: React.CSSProperties; label?: string; highlight?: 'target' }) {
+export function EmptyPile({ style, label, highlight, onClick }: {
+  style?: React.CSSProperties;
+  label?: string;
+  highlight?: 'target';
+  onClick?: () => void;
+}) {
   return (
-    <div style={{
-      width: CARD_W, height: CARD_H,
-      border: highlight === 'target' ? '2px solid #00cc44' : '1px dashed rgba(255,255,255,0.3)',
-      borderRadius: 4, boxSizing: 'border-box',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: 'rgba(255,255,255,0.35)', fontSize: 22,
-      boxShadow: highlight === 'target' ? '0 0 10px 4px rgba(0,204,68,0.7)' : undefined,
-      ...style,
-    }}>
+    <div
+      style={{
+        width: CARD_W, height: CARD_H,
+        border: highlight === 'target' ? '2px solid #00cc44' : '1px dashed rgba(255,255,255,0.3)',
+        borderRadius: 4, boxSizing: 'border-box',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: 'rgba(255,255,255,0.35)', fontSize: 22,
+        boxShadow: highlight === 'target' ? '0 0 10px 4px rgba(0,204,68,0.7)' : undefined,
+        cursor: onClick ? 'pointer' : undefined,
+        ...style,
+      }}
+      onClick={onClick}
+    >
       {label}
     </div>
   );
