@@ -43,7 +43,6 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
     const { openWindow, setSize } = useWindowManager();
     const isMobile = useIsMobile();
 
-    // ── Single-player state ──────────────────────────────────────────────────
     const [difficulty, setDifficulty]   = useState<Difficulty>('beginner');
     const [showDiffMenu, setShowDiffMenu] = useState(false);
     const [grid, setGrid]               = useState<number[][]>([]);
@@ -59,13 +58,12 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
     const menuRef           = useRef<HTMLDivElement>(null);
     const boardContainerRef = useRef<HTMLDivElement>(null);
 
-    // ── Stable game-setter bundle (React dispatchers are always stable) ───────
+    // Stable bundle — React dispatchers are referentially stable so the empty deps array is safe.
     const gameSetters: GameSetters = useMemo(() => ({
         setGrid, setRevealed, setFlagCount, setTimer,
         setLostCell, setWon, setGameStarted, setDifficulty,
     }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ── Multiplayer hook ─────────────────────────────────────────────────────
     const room = useMinesweeperRoom(
         difficulty,
         timer,
@@ -76,7 +74,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         },
     );
 
-    // ── Leave / start new single-player game ─────────────────────────────────
+    /** Leaves any active room and resets all game state to start a fresh single-player game. */
     const startNewGame = useCallback((diff?: Difficulty) => {
         if (timerRef.current) clearInterval(timerRef.current);
         room.leaveRoom();
@@ -96,7 +94,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         else             startNewGame(diff);
     }, [room.roomId, room.restartRoom, startNewGame]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ── Difficulty / resize ───────────────────────────────────────────────────
+    // Resize the window and reset the board when difficulty changes (single-player only).
     useEffect(() => {
         if (room.roomId) return;
         const { w, h } = calcSize(difficulty, false);
@@ -105,7 +103,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [difficulty]);
 
-    // ── Board scaling (mobile only) ──────────────────────────────────────────
+    // Scale the board to fit the available viewport on mobile.
     useEffect(() => {
         if (!isMobile) { setBoardScale(1); return; }
         if (!boardContainerRef.current) return;
@@ -120,14 +118,14 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         return () => obs.disconnect();
     }, [isMobile, difficulty, room.roomId]);
 
-    // ── Timer ────────────────────────────────────────────────────────────────
+    // Advance the timer every second while the game is in progress.
     useEffect(() => {
         if (!gameStarted || lostCell || won) return;
         timerRef.current = setInterval(() => setTimer(t => Math.min(t + 1, 999)), 1000);
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }, [gameStarted, lostCell, won]);
 
-    // ── Click-outside to close Game menu ─────────────────────────────────────
+    // Dismiss the difficulty menu when the user clicks outside of it.
     useEffect(() => {
         if (!showDiffMenu) return;
         const handler = (e: MouseEvent) => {
@@ -138,7 +136,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         return () => document.removeEventListener('mousedown', handler);
     }, [showDiffMenu]);
 
-    // ── Cell left-click ───────────────────────────────────────────────────────
+    /** Handles a left click: generates the grid on first click, reveals the cell, and checks for mine hit or win. */
     const onCellClick = async (x: number, y: number) => {
         if (!grid.length || revealed[y][x] !== 0 || lostCell || won) return;
 
@@ -174,7 +172,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         }
     };
 
-    // ── Cell right-click ──────────────────────────────────────────────────────
+    /** Toggles a flag on an unrevealed cell, or removes an existing flag. */
     const onCellRightClick = async (x: number, y: number) => {
         if (!grid.length) return;
         let newRevealed = revealed;
@@ -196,13 +194,11 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
         if (room.isMultiplayer) await room.syncFlag(newRevealed, newFlagCount, timer);
     };
 
-    // ── Derived / computed ────────────────────────────────────────────────────
     const statusBarLabel = buildStatusBarLabel(
         room.roomId, room.mode, room.roomStatus,
         won, lostCell, grid, revealed, room.opponentStats, difficulty,
     );
 
-    // ── Render ────────────────────────────────────────────────────────────────
     return (
         <div
             className={`app-content ${dseg7.variable}`}
@@ -315,7 +311,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
                 </div>
             </Frame>
 
-            {/* ── Mode Selection Modal ─────────────────────────────────────── */}
+            {/* Mode Selection Modal */}
             {room.showModeModal && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.35)', zIndex: 200 }}>
                     <Frame variant='outside' style={{ width: '220px', padding: 0 }}>
@@ -341,7 +337,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
                 </div>
             )}
 
-            {/* ── Start Room Modal ─────────────────────────────────────────── */}
+            {/* Start Room Modal */}
             {room.showStartModal && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.35)', zIndex: 200 }}>
                     <Frame variant='outside' style={{ width: '240px', padding: 0 }}>
@@ -371,7 +367,7 @@ export default function Minesweeper({ windowId, focusWindow }: MinesweeperProps)
                 </div>
             )}
 
-            {/* ── Join Room Modal ──────────────────────────────────────────── */}
+            {/* Join Room Modal */}
             {room.showJoinModal && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.35)', zIndex: 200 }}>
                     <Frame variant='outside' style={{ width: '240px', padding: 0 }}>

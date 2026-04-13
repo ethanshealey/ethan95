@@ -1,6 +1,6 @@
 # ethan95
 
-A Windows 95-inspired personal portfolio built with Next.js. It simulates a classic desktop environment complete with draggable/resizable windows, a taskbar, desktop icons, and a suite of built-in applications.
+A Windows 95-inspired personal portfolio built with Next.js. It simulates a classic desktop environment complete with draggable/resizable windows, a taskbar, desktop icons, and a suite of built-in applications. On mobile, windows go full-screen automatically.
 
 ## Applications
 
@@ -14,32 +14,35 @@ A Windows 95-inspired personal portfolio built with Next.js. It simulates a clas
 | **Document Viewer** | In-app document renderer |
 | **My Projects** | Portfolio of personal projects |
 | **Internet Explorer** | Embedded browser window |
-| **Programs** | App launcher listing all registered applications |
-| **Games** | Games hub |
-| **Minesweeper** | Beginner / Intermediate / Expert difficulties; flood fill, flagging, safe first click (first tile and neighbors are always mine-free); HMAC-signed score submission |
-| **Minesweeper Records** | Firestore leaderboard sorted by best time per difficulty |
-| **Solitaire** | Classic Klondike solitaire |
-| **Command Line** | ETHAN-DOS 6.22 emulator — supports `CLS`, `DIR`, `CD`, `ECHO`, `DATE`, `TIME`, `VER`, `HELP`, `TYPE`, `EXIT`, `PROGRAMS`, `RUN`, and command history (↑ / ↓) |
-| **Run** | Open any registered application by ID |
 | **Notepad** | Plain-text editor |
 | **Recycle Bin** | Recycle Bin (it's empty) |
+| **Programs** | App launcher listing all registered applications |
+| **Games** | Games hub — opens Minesweeper, Solitaire, or Sudoku |
+| **Minesweeper** | Beginner / Intermediate / Expert difficulties; flood fill, flagging, safe first click; HMAC-signed score submission |
+| **Minesweeper Records** | Firestore leaderboard sorted by best time per difficulty |
+| **Solitaire** | Classic Klondike solitaire with drag-and-drop, tap-to-select, undo, solver hint, and skip; HMAC-signed win leaderboard |
+| **Sudoku** | 9×9 puzzle with Easy / Medium / Hard difficulties; conflict highlighting, related-cell shading, undo, and timer; responsive board (fills available width on mobile); HMAC-signed win leaderboard |
+| **Weather** | Search any city for current conditions and a 7-day high/low forecast, powered by Open-Meteo |
+| **Command Line** | ETHAN-DOS 6.22 emulator — supports `CLS`, `DIR`, `CD`, `ECHO`, `DATE`, `TIME`, `VER`, `HELP`, `TYPE`, `PROGRAMS`, `RUN`, `EXIT`, and command history (↑ / ↓) |
+| **Run** | Open any registered application by ID |
 | **Settings** | Toggle the CRT monitor effect on/off |
 | **Admin** | Password-protected admin panel for managing Firestore content |
 
 ## Features
 
 - **Window management** — drag, resize, minimize, maximize, and close windows; z-order focus tracking
-- **CRT monitor effect** — animated power on/off with scanline overlay, toggleable in Settings
-- **HMAC-signed scores** — Minesweeper scores are signed server-side before being written to Firestore, preventing spoofed submissions
+- **Mobile-responsive** — windows switch to full-screen on viewports ≤ 768 px; game boards scale to fill available width
+- **CRT monitor effect** — animated power-on/off with scanline overlay, toggleable in Settings
+- **HMAC-signed scores** — Minesweeper, Solitaire, and Sudoku scores are signed server-side before being written to Firestore, preventing spoofed submissions
 - **Firestore photo streaming** — albums streamed as Server-Sent Events (SSE) for real-time updates
 - **Classic Windows 95 UI** — authentic look and feel via [React95](https://github.com/React95/React95) and MS Sans Serif
 
 ## Tech Stack
 
-- [Next.js](https://nextjs.org/) 16 (App Router)
+- [Next.js](https://nextjs.org/) 16.2 (App Router)
 - [React](https://react.dev/) 18
 - [React95](https://github.com/React95/React95) — Windows 95 component library
-- [styled-components](https://styled-components.com/)
+- [styled-components](https://styled-components.com/) 5
 - [Firebase](https://firebase.google.com/) 12 (Firestore)
 - [openmeteo](https://github.com/open-meteo/javascript-api) — weather data
 - [dseg](https://github.com/keshikan/DSEG) — digital segment font
@@ -54,16 +57,30 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-A Firebase project with Firestore is required. Set a `SCORE_SECRET` environment variable (used to sign Minesweeper score tokens) and configure your Firebase credentials before running.
+A Firebase project with Firestore is required. Create a `.env.local` with the following variables before running:
+
+```
+SCORE_SECRET=          # server-side HMAC key for score token signing
+NEXT_PUBLIC_SCORE_SECRET=  # matching key exposed to the client for token verification
+```
+
+Configure your Firebase credentials as well (see `lib/firebase.ts`).
 
 ## API Routes
 
 | Method | Route | Description |
 |--------|-------|-------------|
 | `POST` | `/api/minesweeper/token` | Issues a short-lived HMAC token for a score submission |
-| `GET` | `/api/minesweeper` | Returns top scores per difficulty, sorted by time ascending |
-| `PUT` | `/api/minesweeper` | Submits a verified score `{ username, time, difficulty, token }` |
-| `GET` | `/api/photos` | Streams Firestore album data as Server-Sent Events |
+| `GET`  | `/api/minesweeper` | Returns top scores per difficulty, sorted by time ascending |
+| `PUT`  | `/api/minesweeper` | Submits a verified score `{ username, time, difficulty, token, secureToken }` |
+| `POST` | `/api/solitaire/token` | Issues a short-lived HMAC token for a win submission |
+| `GET`  | `/api/solitaire` | Returns the Solitaire win leaderboard, sorted by wins descending |
+| `PUT`  | `/api/solitaire` | Submits a verified win `{ username, token, secureToken }` |
+| `POST` | `/api/sudoku/token` | Issues a short-lived HMAC token for a win submission |
+| `GET`  | `/api/sudoku` | Returns the Sudoku win leaderboard, sorted by wins descending |
+| `PUT`  | `/api/sudoku` | Submits a verified win `{ username, token, secureToken }` |
+| `GET`  | `/api/weather` | Geocodes a city name and proxies current + 7-day forecast from Open-Meteo |
+| `GET`  | `/api/photos` | Streams Firestore album data as Server-Sent Events |
 | `GET/POST/PUT/DELETE` | `/api/admin/[collection]` | CRUD operations on Firestore collections (admin auth required) |
 | `GET/PUT/DELETE` | `/api/admin/[collection]/[docId]` | Single-document operations (admin auth required) |
 | `POST` | `/api/admin/auth` | Admin login |
@@ -73,19 +90,17 @@ A Firebase project with Firestore is required. Set a `SCORE_SECRET` environment 
 
 ```
 app/
-  applications/   # All window apps (Notepad, Photos, Minesweeper, Solitaire, CommandLine, etc.)
+  applications/   # All window apps (Notepad, Minesweeper, Solitaire, Sudoku, Weather, CommandLine, …)
   components/     # Desktop, ApplicationWindow, TaskBar, FileSystem, MinesweeperGrid, SolitaireCard
   context/        # WindowManagerContext (useReducer), SettingsContext (CRT toggle)
-  hooks/          # useWindowManager
+  hooks/          # useWindowManager, useIsMobile
   icons/          # Windows 95 icon set
-  api/            # API routes (minesweeper, photos, admin)
+  api/            # API routes (minesweeper, solitaire, sudoku, weather, photos, admin)
 lib/
   firebase.ts     # Firebase client utilities
-scripts/
-  scrape-albums   # Build-time script to populate album data
 public/
   fonts/          # MS Sans Serif
-  static/         # Images, camera photos, console photos
+  static/         # Images, icons, photos
 ```
 
 ## License

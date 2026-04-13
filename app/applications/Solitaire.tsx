@@ -143,8 +143,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     workerRef.current?.postMessage({ game, seq });
   }, [game, won]);
 
-  // ─── Drop logic ────────────────────────────────────────────────────────────
-  // Stored in a ref so document handlers always call the latest version
+  /** Resolves the drop target and applies the move when the user releases a drag. Stored in a ref so document handlers always see the latest game state. */
   const dropCardsRef = useRef<(d: NonNullable<DragState>, bx: number, by: number) => void>(() => {});
   dropCardsRef.current = (d: NonNullable<DragState>, bx: number, by: number) => {
     const cardLeft = bx - d.ox;
@@ -183,7 +182,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     });
   };
 
-  // ─── Tap logic ─────────────────────────────────────────────────────────────
+  /** Resolves a tap: if cards were already selected, attempts to move them to the tapped location; otherwise selects the tapped cards. */
   const handleTapRef = useRef<(cards: Card[], source: Source) => void>(() => {});
   handleTapRef.current = (tapCards: Card[], tapSource: Source) => {
     const prev = selectedRef.current;
@@ -235,7 +234,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     setSelected(null);
   };
 
-  // ─── Document-level pointer events (mouse + touch unified) ────────────────
+  // Unified pointermove/pointerup handler on the document for drag activation and drop resolution.
   useEffect(() => {
     const getBoardCoords = (clientX: number, clientY: number) => {
       if (!boardRef.current) return null;
@@ -342,7 +341,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
   useEffect(() => {
     if (!won) return;
     (async () => {
-      openWindow('solitaire-winner');
+      openWindow('solitaire-winner', { props: { won: true } });
     })();
   }, [won]);
 
@@ -409,8 +408,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     
   }
 
-  // ─── Board render helpers ───────────────────────────────────────────────────
-
+  /** Renders the stock pile click target; shows a recycle label when the stock is empty. */
   const renderStock = () => (
     <div
       style={{ position: 'absolute', left: colX(0), top: PADDING, cursor: 'pointer' }}

@@ -5,7 +5,10 @@ import { EXPIRY_SECONDS } from './token/route';
 
 interface Score {
   username: string;
+  difficulty: string;
   wins: number;
+  bestTime: number;
+  lastWin: number;
 }
 
 function verifyToken(token: string): boolean {
@@ -36,22 +39,28 @@ function verifySecureToken(token: string, secureToken: string): boolean {
 export async function GET() {
   const snapshot = await getDocs(query(collection(db, 'sudoku'), orderBy('wins', 'desc')));
   const scores: Score[] = snapshot.docs.map((doc) => {
-    const data = doc.data() as Score;
-    return { username: data.username, wins: data.wins };
+    const d = doc.data() as Score;
+    return { username: d.username, difficulty: d.difficulty, wins: d.wins, bestTime: d.bestTime, lastWin: d.lastWin };
   });
   return Response.json(scores);
 }
 
 export async function PUT(request: Request) {
   const body = await request.json();
-  const { username, token, secureToken } = body as {
+  const { username, difficulty, time, token, secureToken } = body as {
     username?: string;
+    difficulty?: string;
+    time?: number;
     token?: string;
     secureToken?: string;
   };
 
+  const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'];
+
   if (
     !username?.trim() ||
+    !difficulty || !VALID_DIFFICULTIES.includes(difficulty) ||
+    typeof time !== 'number' || time <= 0 ||
     !token || !verifyToken(token) ||
     !secureToken || !verifySecureToken(token, secureToken)
   ) {
@@ -59,12 +68,26 @@ export async function PUT(request: Request) {
   }
 
   const sanitized = username.trim().slice(0, 32);
-  const existing = await getDocs(query(collection(db, 'sudoku'), where('username', '==', sanitized)));
+  const now = Date.now();
 
-  if (existing.empty) {
-    await addDoc(collection(db, 'sudoku'), { username: sanitized, wins: 1 });
+  const userDocs = await getDocs(query(collection(db, 'sudoku'), where('username', '==', sanitized)));
+  const existing = userDocs.docs.find((d) => d.data().difficulty === difficulty);
+
+  if (!existing) {
+    await addDoc(collection(db, 'sudoku'), {
+      username: sanitized,
+      difficulty,
+      wins: 1,
+      bestTime: time,
+      lastWin: now,
+    });
   } else {
-    await updateDoc(existing.docs[0].ref, { wins: increment(1) });
+    const current = existing.data() as Score;
+    await updateDoc(existing.ref, {
+      wins: increment(1),
+      bestTime: time < current.bestTime ? time : current.bestTime,
+      lastWin: now,
+    });
   }
 
   return Response.json({ success: true }, { status: 200 });

@@ -7,9 +7,12 @@ import { useWindowManager } from '../hooks/useWindowManager';
 interface SudokuWinnerProps {
   windowId: string;
   focusWindow: (id: string) => void;
+  won?: boolean;
+  difficulty?: string;
+  time?: number;
 }
 
-export default function SudokuWinner({ windowId, focusWindow }: SudokuWinnerProps) {
+export default function SudokuWinner({ windowId, focusWindow, won, difficulty, time }: SudokuWinnerProps) {
   const { closeWindow } = useWindowManager();
   const [name, setName] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -23,7 +26,7 @@ export default function SudokuWinner({ windowId, focusWindow }: SudokuWinnerProp
     const res = await fetch('/api/sudoku/token', { method: 'POST' });
     const { token } = await res.json();
 
-    if (!name.trim() || !token) {
+    if (!won || !difficulty?.trim() || !name.trim() || !token) {
       alert('No cheating ;)');
       return;
     }
@@ -40,7 +43,7 @@ export default function SudokuWinner({ windowId, focusWindow }: SudokuWinnerProp
     await fetch('/api/sudoku', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: name, token, secureToken }),
+      body: JSON.stringify({ username: name, difficulty, time, token, secureToken }),
     });
 
     setSubmitted(true);
@@ -53,7 +56,7 @@ export default function SudokuWinner({ windowId, focusWindow }: SudokuWinnerProp
       onClick={(e) => { e.stopPropagation(); focusWindow(windowId); }}
     >
       <h1 style={{ margin: 0, fontSize: 14 }}>Congratulations, You solved it!</h1>
-      <p style={{ margin: 0, fontSize: 12 }}>Enter your name to save your win to the leaderboard.</p>
+      <p style={{ margin: 0, fontSize: 12 }}>You solved {difficulty?.charAt(0).toUpperCase()}{difficulty?.slice(1)} in {time}s! Enter your name to save your win to the leaderboard.</p>
       <div style={{ display: 'flex' }}>
         <TextInput
           value={name}

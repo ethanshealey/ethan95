@@ -5,19 +5,19 @@ import { Button, Frame, MenuList, MenuListItem, Separator, Toolbar } from 'react
 import { useWindowManager } from '../hooks/useWindowManager';
 import { useIsMobile } from '../hooks/useIsMobile';
 
-// ─── Types ─────────────────────────────────────────────────────────────────
-
+/** Difficulty levels controlling how many cells are pre-filled in the puzzle. */
 type Difficulty = 'easy' | 'medium' | 'hard';
+/** Row-major 9×9 grid where 0 represents an empty cell. */
 type Board = number[][];
 
+/** Snapshot of a generated puzzle with its full solution and which cells are pre-filled. */
 interface SudokuGame {
   solution: Board;
   puzzle: Board;
   given: boolean[][];
 }
 
-// ─── Puzzle Generation ─────────────────────────────────────────────────────
-
+/** Returns a new array with elements in random order using Fisher-Yates shuffle. */
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -27,6 +27,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+/** Returns true if placing num at (row, col) would not violate any row, column, or 3×3 box constraint. */
 function canPlace(board: Board, row: number, col: number, num: number): boolean {
   for (let i = 0; i < 9; i++) {
     if (board[row][i] === num) return false;
@@ -40,6 +41,7 @@ function canPlace(board: Board, row: number, col: number, num: number): boolean 
   return true;
 }
 
+/** Fills empty cells via backtracking. Pass randomize=true during generation to shuffle candidate order for variety. */
 function solve(board: Board, randomize: boolean): boolean {
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
@@ -58,8 +60,10 @@ function solve(board: Board, randomize: boolean): boolean {
   return true;
 }
 
+/** Number of pre-filled cells per difficulty level. */
 const CLUE_COUNTS: Record<Difficulty, number> = { easy: 45, medium: 35, hard: 25 };
 
+/** Generates a fully solved board then removes cells to create a puzzle at the requested difficulty. */
 function generatePuzzle(difficulty: Difficulty): SudokuGame {
   const solution: Board = Array.from({ length: 9 }, () => Array(9).fill(0));
   solve(solution, true);
@@ -81,8 +85,7 @@ function generatePuzzle(difficulty: Difficulty): SudokuGame {
   return { solution, puzzle, given };
 }
 
-// ─── Conflict / completion helpers ─────────────────────────────────────────
-
+/** Returns true if the value at (row, col) conflicts with another cell in the same row, column, or 3×3 box. */
 function cellHasConflict(board: Board, row: number, col: number): boolean {
   const num = board[row][col];
   if (num === 0) return false;
@@ -98,6 +101,7 @@ function cellHasConflict(board: Board, row: number, col: number): boolean {
   return false;
 }
 
+/** Returns true when every cell is filled and no conflicts exist. */
 function isBoardComplete(board: Board): boolean {
   for (let r = 0; r < 9; r++)
     for (let c = 0; c < 9; c++)
@@ -105,20 +109,24 @@ function isBoardComplete(board: Board): boolean {
   return true;
 }
 
-// ─── Layout constants ───────────────────────────────────────────────────────
-
+/** Default cell size in pixels on desktop. */
 const BASE_CELL = 36;
-// Frame variant='well' adds ~2px border each side → 4px total per axis.
-// Outer margin: 8px each side → 16px. Total overhead per axis: 20px.
+/**
+ * Pixel overhead consumed by the board's Frame border and outer margins on each axis.
+ * Frame variant='well' adds ~2px border per side (4px total) plus 8px margin per side (16px total).
+ */
 const BOARD_OVERHEAD = 20;
 
-// ─── Component ─────────────────────────────────────────────────────────────
-
+/** Props accepted by the Sudoku window component. */
 interface SudokuProps {
   windowId: string;
   focusWindow: (id: string) => void;
 }
 
+/**
+ * Windows 95-styled Sudoku game with responsive layout, keyboard navigation,
+ * undo support, and a persistent leaderboard on completion.
+ */
 export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
   const [game, setGame] = useState<SudokuGame>(() => generatePuzzle('medium'));
   const [board, setBoard] = useState<Board>(() => game.puzzle.map(r => [...r]));
@@ -143,7 +151,7 @@ export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
 
   const won = isBoardComplete(board);
 
-  // ─── Responsive cell size ────────────────────────────────────────────────
+  // Compute cell size from available container width; on mobile also caps based on remaining screen height.
   useEffect(() => {
     const compute = () => {
       if (!wrapperRef.current) return;
@@ -177,12 +185,12 @@ export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
     };
   }, []);
 
-  // ─── Focus on mount ─────────────────────────────────────────────────────
+  // Focus the window element on initial mount so keyboard input works immediately.
   useEffect(() => {
     document.getElementById(windowId)?.focus();
   }, []);
 
-  // ─── Timer ──────────────────────────────────────────────────────────────
+  // Run a 1-second interval timer; stop it when the puzzle is solved.
   useEffect(() => {
     if (won) {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -192,15 +200,15 @@ export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [won]);
 
-  // ─── Win detection ──────────────────────────────────────────────────────
+  // Open the winner modal once when the board transitions to a completed state.
   useEffect(() => {
     if (won && !wonHandledRef.current) {
       wonHandledRef.current = true;
-      openWindow('sudoku-winner');
+      openWindow('sudoku-winner', { props: { won: true, difficulty, time: timer } });
     }
   }, [won]);
 
-  // ─── Close menu on outside click ────────────────────────────────────────
+  // Dismiss the Game menu when the user clicks outside of it.
   useEffect(() => {
     if (!showMenu) return;
     const handler = (e: MouseEvent) => {
@@ -210,7 +218,7 @@ export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [showMenu]);
 
-  // ─── Keyboard input ─────────────────────────────────────────────────────
+  // Handle arrow-key navigation and digit/backspace entry for the selected cell.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!selected) return;
@@ -260,7 +268,7 @@ export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
     wonHandledRef.current = false;
   }, [difficulty]);
 
-  // ─── Cell helpers ────────────────────────────────────────────────────────
+  /** Returns true if (r, c) shares a row, column, or 3×3 box with the currently selected cell. */
   const isRelated = (r: number, c: number): boolean => {
     if (!selected) return false;
     return r === selected.row || c === selected.col ||
@@ -304,14 +312,12 @@ export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
 
   const canEdit = selected && !game.given[selected.row][selected.col];
 
-  // ─── Render ──────────────────────────────────────────────────────────────
   return (
     <div
       ref={wrapperRef}
       className="app-content"
       onClick={(e) => { e.stopPropagation(); focusWindow(windowId); }}
     >
-      {/* ── Toolbar ── */}
       <Toolbar style={{ display: 'flex', alignItems: 'center' }}>
         <div ref={menuRef} style={{ position: 'relative' }}>
           <Button variant='menu' size='sm' onClick={() => setShowMenu(v => !v)}>Game</Button>
@@ -348,7 +354,6 @@ export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
         </span>
       </Toolbar>
 
-      {/* ── Board ── */}
       <div ref={boardFrameRef} style={{ display: 'inline-block' }}>
       <Frame
         variant='well'
@@ -374,7 +379,6 @@ export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
       </Frame>
       </div>
 
-      {/* ── Number pad ── */}
       <div ref={numpadRef}>
       {isMobile ? (
         // 3×3 grid with full-width erase — phone numpad style

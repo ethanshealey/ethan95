@@ -7,10 +7,10 @@ import { useWindowManager } from '../hooks/useWindowManager';
 interface SolitaireWinnerProps {
   windowId: string;
   focusWindow: (id: string) => void;
-  token?: string;
+  won?: boolean;
 }
 
-export default function SolitaireWinner({ windowId, focusWindow }: SolitaireWinnerProps) {
+export default function SolitaireWinner({ windowId, focusWindow, won }: SolitaireWinnerProps) {
   const { closeWindow } = useWindowManager();
   const [text, setText] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -25,7 +25,7 @@ export default function SolitaireWinner({ windowId, focusWindow }: SolitaireWinn
     const res = await fetch('/api/solitaire/token', { method: 'POST' });
     const { token } = await res.json();
 
-    if(!text.trim() || !token) {
+    if(!won || !text.trim() || !token) {
       alert('No cheating ;)')
       return
     }

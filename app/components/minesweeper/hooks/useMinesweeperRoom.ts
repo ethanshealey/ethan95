@@ -70,14 +70,12 @@ export function useMinesweeperRoom(
     onRoomSizeChange: (difficulty: Difficulty) => void,
 ): RoomAPI {
 
-    // ── Room state ─────────────────────────────────────────────────────────────
     const [roomId, setRoomId]               = useState<string | null>(null);
     const [playerRole, setPlayerRole]       = useState<'host' | 'guest' | null>(null);
     const [roomStatus, setRoomStatus]       = useState<'waiting' | 'playing' | null>(null);
     const [mode, setMode]                   = useState<RoomMode>('versus');
     const [opponentStats, setOpponentStats] = useState<OpponentStats | null>(null);
 
-    // ── Modal state ────────────────────────────────────────────────────────────
     const [showModeModal, setShowModeModal]   = useState(false);
     const [showStartModal, setShowStartModal] = useState(false);
     const [showJoinModal, setShowJoinModal]   = useState(false);
@@ -86,7 +84,7 @@ export function useMinesweeperRoom(
     const [startingRoom, setStartingRoom]   = useState(false);
     const [joiningRoom, setJoiningRoom]     = useState(false);
 
-    // ── Stable refs for subscription callbacks (never capture stale state) ─────
+    // Refs mirror the corresponding state values so subscription callbacks never close over stale data.
     const roomIdRef     = useRef<string | null>(null);
     const playerRoleRef = useRef<'host' | 'guest' | null>(null);
     const roomStatusRef = useRef<'waiting' | 'playing' | null>(null);
@@ -96,13 +94,13 @@ export function useMinesweeperRoom(
     const roundRef      = useRef<number>(0);
     roomIdRef.current   = roomId;
 
-    // ── Timer sync to RTDB (versus only) ──────────────────────────────────────
+    // Sync the local timer to the database on every tick during a versus match.
     useEffect(() => {
         if (!roomId || !playerRole || roomStatus !== 'playing' || modeRef.current === 'coop') return;
         syncPlayerState(roomId, playerRole, { timer });
     }, [timer, roomId, playerRole, roomStatus]);
 
-    // ── Leave / cleanup ────────────────────────────────────────────────────────
+    /** Unsubscribes from the room and resets all multiplayer state to its initial values. */
     const leaveRoom = useCallback(() => {
         unsubRef.current?.();
         unsubRef.current      = null;
@@ -118,7 +116,7 @@ export function useMinesweeperRoom(
         setShowJoinModal(false);
     }, []);
 
-    // ── Apply game state from an incoming round reset ──────────────────────────
+    /** Applies a fresh grid and blank board state when the host restarts the room for a new round. */
     const resetForNewRound = useCallback((room: Room) => {
         roundRef.current = room.round ?? 0;
         const roomGrid   = JSON.parse(room.grid) as number[][];
@@ -140,7 +138,7 @@ export function useMinesweeperRoom(
         setOpponentStats(null);
     }, [gameSetters]);
 
-    // ── Firebase subscription handler ──────────────────────────────────────────
+    /** Processes incoming room updates from Firebase and drives local game state for both versus and co-op modes. */
     const handleRoomUpdate = useCallback((room: Room) => {
         const newRound = room.round ?? 0;
         if (newRound > roundRef.current) {
@@ -180,7 +178,7 @@ export function useMinesweeperRoom(
         }
     }, [resetForNewRound, gameSetters]);
 
-    // ── Start Room (host) ──────────────────────────────────────────────────────
+    /** Creates a new multiplayer room with the current difficulty and subscribes to updates as the host. */
     const startRoom = useCallback(async () => {
         setStartingRoom(true);
         try {
@@ -215,7 +213,7 @@ export function useMinesweeperRoom(
         }
     }, [difficulty, gameSetters, handleRoomUpdate, onRoomSizeChange]);
 
-    // ── Join Room (guest) ──────────────────────────────────────────────────────
+    /** Validates the join code, joins the specified room as a guest, and begins subscribing to updates. */
     const joinRoom = useCallback(async () => {
         const code = joinCode.trim().toUpperCase();
         if (code.length !== 6) { setJoinError('Enter a valid 6-character room code.'); return; }
@@ -267,7 +265,7 @@ export function useMinesweeperRoom(
         }
     }, [joinCode, gameSetters, handleRoomUpdate, onRoomSizeChange]);
 
-    // ── Restart Room (host only) ───────────────────────────────────────────────
+    /** Host-only: generates a new grid and increments the round counter to trigger a reset on all clients. */
     const restartRoom = useCallback(async () => {
         const id = roomIdRef.current;
         if (!id) return;
@@ -278,7 +276,7 @@ export function useMinesweeperRoom(
         await restartRoomFirebase(id, grid, difficulty, hostState, sharedState);
     }, [difficulty]);
 
-    // ── Board sync helpers (coop vs. versus routing) ───────────────────────────
+    /** Syncs the revealed grid after a cell is uncovered, routing to shared or player state based on game mode. */
     const syncReveal = useCallback(async (rev: number[][], fc: number, t: number) => {
         const id = roomIdRef.current; const role = playerRoleRef.current;
         if (!id || !role) return;
