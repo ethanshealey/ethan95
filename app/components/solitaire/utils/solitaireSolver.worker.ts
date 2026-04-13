@@ -10,6 +10,9 @@ const post = (data: OutMsg) =>
   (self as unknown as { postMessage(d: OutMsg): void }).postMessage(data);
 
 addEventListener('message', (e: MessageEvent<InMsg>) => {
-  console.log('Worker received message', e.data);
-  post({ solvable: isSolvable(e.data.game), seq: e.data.seq });
+  try {
+    post({ solvable: isSolvable(e.data.game), seq: e.data.seq });
+  } catch (err) {
+    console.error('isSolvable threw:', err);
+  }
 });

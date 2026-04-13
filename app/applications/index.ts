@@ -23,6 +23,9 @@ import Settings from './Settings';
 import Weather from './Weather';
 import CommandLine from './CommandLine';
 import Run from './Run';
+import Sudoku from './Sudoku';
+import SudokuWinner from './SudokuWinner';
+import SudokuLeaderboard from './SudokuLeaderboard';
 
 export const DEFAULT_WINDOW_SIZE = { width: 500, height: 400 };
 export const DEFAULT_MIN_SIZE = { width: 300, height: 200 };
@@ -180,6 +183,27 @@ export const APPLICATIONS: RegisteredApp[] = [
     icon: Icons.WORLD,
     component: Weather,
   },
+  {
+    id: 'sudoku',
+    name: 'Sudoku',
+    icon: Icons.WINREP,
+    component: Sudoku,
+    fitContent: true,
+  },
+  {
+    id: 'sudoku-winner',
+    name: 'Sudoku Winner',
+    icon: Icons.WINREP,
+    component: SudokuWinner,
+    fitContent: true,
+  },
+  {
+    id: 'sudoku-leaderboard',
+    name: 'Sudoku Leaderboard',
+    icon: Icons.WINREP,
+    component: SudokuLeaderboard,
+    fitContent: true,
+  }
 ];
 
 export function getAppById(id: string): RegisteredApp | undefined {

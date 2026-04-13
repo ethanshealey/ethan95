@@ -17,6 +17,7 @@ export default function Games({ windowId, focusWindow }: GamesProps) {
     const items: FileItem[] = [
         { name: 'Minesweeper', icon: Icons.MINESWEEPER, type: 'file', modified: '3/21/2026', onOpen: () => openWindow('minesweeper', { props: {  } }) },
         { name: 'Solitaire', icon: Icons.GAME_SOLITAIRE, type: 'file', modified: '3/21/2026', onOpen: () => openWindow('solitaire', { props: {  } }) },
+        { name: 'Sudoku', icon: Icons.WINREP, type: 'file', modified: '3/21/2026', onOpen: () => openWindow('sudoku', { props: {  } }) },
     ];
 
     useEffect(() => {

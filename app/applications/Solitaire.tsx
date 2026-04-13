@@ -8,9 +8,10 @@ import {
   Card, GameState, Source, HintResult,
   SUIT_ORDER, SUIT_SYMBOLS, FACE_UP_STEP, BOARD_W, BOARD_H, PADDING, TABLEAU_Y, CARD_W, CARD_H,
   dealGame, canMoveToTableau, canMoveToFoundation,
-  getFoundationIndex, applyMove, colX, tableauCardY, findHint,
+  getFoundationIndex, applyMove, colX, tableauCardY, findHint, allCardsFlipped,
 } from '../components/solitaire/utils/SolitaireUtils';
 import { CardFace, CardBack, EmptyPile } from '../components/solitaire/SolitaireCard';
+import { set } from 'firebase/database';
 
 const DRAG_THRESHOLD = 8; // px of movement before drag activates
 
@@ -68,6 +69,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
   const selectedRef = useRef<SelectedState>(null);
   const workerRef = useRef<Worker | null>(null);
   const solveSeqRef = useRef(0);
+  const prevTableauRef = useRef(game.tableau);
   scaleRef.current = scale;
   selectedRef.current = selected;
 
@@ -89,15 +91,10 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
         setScale(Math.min(1, scaleW));
         return;
       }
-      const parent = containerRef.current!.parentElement;
-      const siblingH = parent
-        ? Array.from(parent.children)
-            .filter(el => el !== containerRef.current)
-            .reduce((sum, el) => sum + (el as HTMLElement).clientHeight, 0)
-        : 0;
-      const availableH = (parent?.clientHeight ?? BOARD_H) - siblingH;
+      const containerTop = containerRef.current!.getBoundingClientRect().top;
+      const availableH = window.innerHeight - containerTop;
       const scaleH = availableH / BOARD_H;
-      setScale(Math.min(scaleW, scaleH));
+      setScale(Math.min(scaleW, Math.max(scaleH, 0.1)));
     });
     obs.observe(containerRef.current);
     return () => obs.disconnect();
@@ -126,15 +123,21 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
       new URL('../components/solitaire/utils/solitaireSolver.worker.ts', import.meta.url),
     );
     w.onmessage = (e: MessageEvent<{ solvable: boolean; seq: number }>) => {
-      if (e.data.seq === solveSeqRef.current) setStuck(!e.data.solvable);
+      if (e.data.seq === solveSeqRef.current) {
+        console.log('Solver found no routes:', e.data);
+        setStuck(!e.data.solvable);
+      }
     };
+    w.onerror = (e) => console.error('Solver worker error:', e.message, e);
     workerRef.current = w;
     return () => w.terminate();
   }, []);
 
-  // Re-run the solver whenever the board changes; discard stale results via seq
+  // Re-run the solver only when the tableau changes; discard stale results via seq
   useEffect(() => {
     if (won) { setStuck(false); return; }
+    if (game.tableau === prevTableauRef.current) return;
+    prevTableauRef.current = game.tableau;
     const seq = ++solveSeqRef.current;
     setStuck(false);
     workerRef.current?.postMessage({ game, seq });
@@ -157,8 +160,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
       // Foundation: single card, match by suit, generous vertical zone
       if (d.cards.length === 1) {
         const inFoundationZone = cardTop < TABLEAU_Y + 20;
-        const overFoundationCols = candidates.some(c => c.ci >= 3);
-        if (inFoundationZone || overFoundationCols) {
+        if (inFoundationZone) {
           const card = d.cards[0];
           const fi = getFoundationIndex(card.suit);
           const pile = g.foundations[fi];
@@ -378,6 +380,35 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     isSel: boolean,
   ): 'source' | 'target' | 'selected' | undefined => isSel ? 'selected' : base;
 
+  const skipToDone = () => {
+    setGame(g => {
+      const ng = { ...g };
+      
+      ng.stock = [];
+      ng.waste = [];
+      ng.tableau = ng.tableau.map(_ => []);
+
+      // Generate cards
+      const aceOfClubs: Card = { suit: 'clubs', rank: 1, faceUp: true };
+      const aceOfDiamonds: Card = { suit: 'diamonds', rank: 1, faceUp: true };
+      const aceOfHearts: Card = { suit: 'hearts', rank: 1, faceUp: true };
+      const aceOfSpades: Card = { suit: 'spades', rank: 1, faceUp: true };
+
+      while(ng.foundations[0].length < 13)
+        ng.foundations[0].push(aceOfClubs);
+      while(ng.foundations[1].length < 13)
+        ng.foundations[1].push(aceOfDiamonds);
+      while(ng.foundations[2].length < 13)
+        ng.foundations[2].push(aceOfHearts);
+      while(ng.foundations[3].length < 13)
+        ng.foundations[3].push(aceOfSpades);
+
+      return ng;
+    });
+
+    
+  }
+
   // ─── Board render helpers ───────────────────────────────────────────────────
 
   const renderStock = () => (
@@ -517,6 +548,11 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
           const h = findHint(game);
           if (h) { setHint(h); hintTimerRef.current = setTimeout(clearHint, 3000); }
         }}>Help</Button>
+        {
+          allCardsFlipped(game) && (
+            <Button variant='menu' size='sm' onClick={skipToDone}>Skip</Button>
+          )
+        }
         <Button variant='menu' size='sm' onClick={undo} disabled={history.length === 0}>Undo</Button>
         {!won && stuck && (
           <span style={{ marginLeft: 8, fontSize: 12, color: '#800000', fontFamily: 'sans-serif', alignSelf: 'center' }}>

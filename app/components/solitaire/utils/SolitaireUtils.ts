@@ -5,6 +5,7 @@ export type GameState = {
   waste: Card[];
   foundations: [Card[], Card[], Card[], Card[]];
   tableau: Card[][];
+  allFlipped?: boolean;
 };
 export type Source =
   | { type: 'tableau'; col: number; cardIndex: number }
@@ -266,11 +267,14 @@ const MAX_SOLVER_STATES = 200_000;
 export function isSolvable(game: GameState): boolean {
   if (game.foundations.every(f => f.length === 13)) return true;
 
+  console.log('Starting solver with game state', game);
+
   const visited = new Set<string>();
   const stack: GameState[] = [game];
   visited.add(gameStateKey(game));
 
   while (stack.length > 0) {
+    console.log(visited.size)
     if (visited.size >= MAX_SOLVER_STATES) return true; // benefit of the doubt
     const state = stack.pop()!;
     for (const next of generateMoves(state)) {
@@ -334,6 +338,13 @@ function deduplicateGameState(g: GameState): GameState {
   );
 
   return { stock, waste, foundations, tableau };
+}
+
+export function allCardsFlipped(g: GameState): boolean {
+  const allTableauFlipped = g.tableau.every(col => col.every(c => c.faceUp));
+  const allStockFlipped = g.stock.length === 0 || (g.stock.length === 1 && g.waste.length === 0)
+
+  return allTableauFlipped && allStockFlipped;
 }
 
 export function applyMove(

@@ -13,7 +13,7 @@ interface ApplicationWindowProps {
 
 const MINIMIZE_EXCLUSION_LIST = ['Welcome'];
 const MAXIMIZE_EXCLUSION_LIST = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Solitaire', 'Solitaire Winner', 'Run'];
-const RESIZE_EXCLUSION_LIST   = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Minesweeper Records', 'Solitaire', 'Solitaire Winner', 'Solitaire Leaderboard', 'Run'];
+const RESIZE_EXCLUSION_LIST   = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Minesweeper Records', 'Solitaire', 'Solitaire Winner', 'Solitaire Leaderboard', 'Run', 'Sudoku', 'Sudoku Winner', 'Sudoku Leaderboard'];
 
 export default function ApplicationWindow({ windowData, app }: ApplicationWindowProps) {
   const { focusWindow, setPosition, setSize, toggleMinimize, toggleMaximize, closeWindow } = useWindowManager();
