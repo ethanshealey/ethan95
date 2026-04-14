@@ -69,7 +69,7 @@ export const BASE_LOCATION = ['home', 'user', 'ethan95']
 
 const HELP_LINES: string[] = [
     '',
-    'CD / CHDIR    Displays or changes the current directory.',
+    'CD / CHDIR    Changes the current directory.',
     'CLS / CLEAR   Clears the screen.',
     'CAT           Displays the contents of a file.',
     'DATE          Displays the current date.',
