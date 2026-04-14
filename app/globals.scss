@@ -558,9 +558,74 @@ body, html {
   box-sizing: border-box;
 }
 
+.vim-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: #c0c0c0;
+  outline: none;
+}
+
+.vim-buffer {
+  flex: 1;
+  overflow: auto;
+}
+
+.vim-line {
+  display: flex;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.vim-gutter {
+  color: #555;
+  min-width: 1.5ch;
+  text-align: right;
+  padding-right: 4px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.vim-line-content {
+  flex: 1;
+}
+
+.vim-cursor {
+  &.vim-cursor--block {
+    background-color: #c0c0c0;
+    color: #000;
+  }
+
+  &.vim-cursor--insert {
+    display: inline-block;
+    width: 0;
+    overflow: visible;
+    border-left: 2px solid #c0c0c0;
+    margin-left: -1px;
+    vertical-align: text-bottom;
+    height: 1em;
+  }
+}
+
+.vim-statusbar {
+  display: flex;
+  justify-content: space-between;
+  background-color: #808080;
+  color: #000;
+  padding: 0 6px;
+  line-height: 1.5;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.vim-cmdline {
+  line-height: 1.5;
+  white-space: pre;
+  flex-shrink: 0;
+}
 .cli-line {
   color: #c0c0c0;
-  white-space: pre;
+  white-space: pre-wrap;
   line-height: 1.5;
   min-height: 1.5em;
 }
@@ -584,6 +649,8 @@ body, html {
 
 .cli-cursor {
   display: inline-block;
+  width: 0;
+  overflow: visible;
   color: transparent;
 
   &.cli-cursor--on {
