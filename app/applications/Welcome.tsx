@@ -12,6 +12,7 @@ interface WelcomeProps {
 
 const TIPS = [
     "My name is Ethan and I'm a full-stack software engineer based in Durham, NC.",
+    "You can view some of my friends websites in the Internet Explorer application.",
     "You can view my Résumé in the My Documents application.",
     "This site is built with Next.js and React95.",
     "Double-click any icon on the desktop to open an application.",

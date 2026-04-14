@@ -26,6 +26,7 @@ import Run from './Run';
 import Sudoku from './Sudoku';
 import SudokuWinner from './SudokuWinner';
 import SudokuLeaderboard from './SudokuLeaderboard';
+import Compress from './Compress';
 
 export const DEFAULT_WINDOW_SIZE = { width: 500, height: 400 };
 export const DEFAULT_MIN_SIZE = { width: 300, height: 200 };
@@ -36,6 +37,7 @@ export interface RegisteredApp {
   icon: string;
   component: React.ComponentType<any>;
   fitContent?: boolean;
+  minSize?: { width: number; height: number };
 }
 
 export const APPLICATIONS: RegisteredApp[] = [
@@ -203,6 +205,12 @@ export const APPLICATIONS: RegisteredApp[] = [
     icon: Icons.WINREP,
     component: SudokuLeaderboard,
     fitContent: true,
+  },
+  {
+    id: 'compress',
+    name: 'Image Compressor',
+    icon: Icons.KODAK_IMAGING,
+    component: Compress,
   }
 ];
 

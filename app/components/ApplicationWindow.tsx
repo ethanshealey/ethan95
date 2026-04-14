@@ -62,8 +62,9 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
       } else if (isResizing) {
         const deltaX = e.clientX - resizeStart.x;
         const deltaY = e.clientY - resizeStart.y;
-        const newWidth = Math.max(resizeStart.width + deltaX, DEFAULT_MIN_SIZE.width);
-        const newHeight = Math.max(resizeStart.height + deltaY, DEFAULT_MIN_SIZE.height);
+        const minSize = app.minSize ?? DEFAULT_MIN_SIZE;
+        const newWidth = Math.max(resizeStart.width + deltaX, minSize.width);
+        const newHeight = Math.max(resizeStart.height + deltaY, minSize.height);
         setSize(windowData.id, newWidth, newHeight);
       }
     };

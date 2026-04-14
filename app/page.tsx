@@ -4,8 +4,10 @@ import { WindowManagerProvider } from "./context/WindowManagerContext";
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
 import { useEffect, useState } from "react";
 import './crt.scss';
+import { useWindowManager } from "./hooks/useWindowManager";
 
 function HomeInner() {
+
   const [screenOn, setScreenOn] = useState<boolean>(false)
   const { crtEnabled } = useSettings()
 

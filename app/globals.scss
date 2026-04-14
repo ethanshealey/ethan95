@@ -35,11 +35,12 @@ body, html {
 .desktop-icons {
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   align-items: flex-start;
   gap: 20px;
   padding: 20px;
   height: 100%;
-  width: 100%;
+  width: 50px;
 }
 
 .icon-item {
