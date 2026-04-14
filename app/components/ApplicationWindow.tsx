@@ -75,9 +75,11 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
     };
 
     if (isDragging || isResizing) {
+      document.body.style.userSelect = 'none';
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
+        document.body.style.userSelect = '';
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       };
