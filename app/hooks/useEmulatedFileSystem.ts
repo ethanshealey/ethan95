@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { autofill, cat, changeDirectory, createDirectory, createFile, deleteFile, echo, editFile, listDirectory, updateFile } from '../helpers/CommandHelpers';
 import { APPLICATIONS } from '../applications';
 import peter from '../helpers/peter';
@@ -91,17 +91,19 @@ const HELP_LINES: string[] = [
 export function useEmulatedFileSystem() {
     const [fileSystem, setFileSystem] = useState<EmulatedFileSystem | null>(BASE_FILE_SYSTEM);
     const [location, setLocation] = useState<string[]>([]);
+    const hydrated = useRef(false);
 
     useEffect(() => {
         const fs = localStorage.getItem('filesystem');
         if (fs !== null) {
             setFileSystem(JSON.parse(fs));
         }
-
+        hydrated.current = true;
         setLocation([...BASE_LOCATION])
     }, []);
 
     useEffect(() => {
+        if (!hydrated.current) return;
         console.log(fileSystem)
         localStorage.setItem('filesystem', JSON.stringify(fileSystem));
     }, [fileSystem])

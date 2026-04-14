@@ -23,7 +23,8 @@ A Windows 95-inspired personal portfolio built with Next.js. It simulates a clas
 | **Solitaire** | Classic Klondike solitaire with drag-and-drop, tap-to-select, undo, solver hint, and skip; HMAC-signed win leaderboard |
 | **Sudoku** | 9×9 puzzle with Easy / Medium / Hard difficulties; conflict highlighting, related-cell shading, undo, and timer; responsive board (fills available width on mobile); HMAC-signed win leaderboard |
 | **Weather** | Search any city for current conditions and a 7-day high/low forecast, powered by Open-Meteo |
-| **Command Line** | ETHAN-DOS 6.22 emulator — supports `CLS`, `DIR`, `CD`, `ECHO`, `DATE`, `TIME`, `VER`, `HELP`, `TYPE`, `PROGRAMS`, `RUN`, `EXIT`, and command history (↑ / ↓) |
+| **Command Line** | ETHAN-DOS 6.22 emulator with a fully emulated filesystem (persisted to `localStorage`). Commands: `CD/CHDIR`, `CLS/CLEAR`, `CAT`, `DATE`, `DEL/RM [-r]`, `DIR/LS`, `ECHO`, `EDIT/VI/VIM`, `EXIT`, `HELP`, `MKDIR`, `PROGRAMS`, `RUN`, `TIME`, `TOUCH`, `VER`. Features command history (↑ / ↓), double-Tab autocomplete, and an embedded Vim editor for file editing |
+| **Image Compressor** | Client-side image compressor — upload any image, set a quality level with a slider (0–100), and download the compressed result; powered by `image-conversion` |
 | **Run** | Open any registered application by ID |
 | **Settings** | Toggle the CRT monitor effect on/off |
 | **Admin** | Password-protected admin panel for managing Firestore content |
@@ -91,9 +92,9 @@ Configure your Firebase credentials as well (see `lib/firebase.ts`).
 ```
 app/
   applications/   # All window apps (Notepad, Minesweeper, Solitaire, Sudoku, Weather, CommandLine, …)
-  components/     # Desktop, ApplicationWindow, TaskBar, FileSystem, MinesweeperGrid, SolitaireCard
+  components/     # Desktop, ApplicationWindow, TaskBar, FileSystem, MinesweeperGrid, SolitaireCard, Vim
   context/        # WindowManagerContext (useReducer), SettingsContext (CRT toggle)
-  hooks/          # useWindowManager, useIsMobile
+  hooks/          # useWindowManager, useIsMobile, useEmulatedFileSystem
   icons/          # Windows 95 icon set
   api/            # API routes (minesweeper, solitaire, sudoku, weather, photos, admin)
 lib/
