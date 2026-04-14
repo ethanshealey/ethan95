@@ -24,8 +24,9 @@ export default function SolitaireLeaderboard({ windowId, focusWindow }: Solitair
 
   const getScores = async () => {
     const res = await fetch('/api/solitaire');
-    const json = await res.json();
-    setScores(json);
+    const json: Score[] = await res.json();
+
+    setScores(json.sort((a, b) => b.wins - a.wins));
   };
 
   return (
