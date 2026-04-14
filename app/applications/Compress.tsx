@@ -61,7 +61,8 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
                 size: targetSizeKb,
                 // type: type // For some reason this doesnt work for PNGs like documentation says it would :(
             })
-            setImage(_ => compressedFile as File);
+            const renamedFile = new File([compressedFile], image.name, { type: compressedFile.type });
+            setImage(_ => renamedFile);
             setIsCompressing(false)
 
 
