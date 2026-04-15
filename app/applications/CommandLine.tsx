@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useWindowManager } from '../hooks/useWindowManager';
+import { useWindowManager, useWindowState } from '../hooks/useWindowManager';
 import peter from '../helpers/peter';
 import { OPEN_VIM_FLAG, useEmulatedFileSystem } from '../hooks/useEmulatedFileSystem';
 import Vim from '../components/Vim';
@@ -20,6 +20,8 @@ const BOOT_LINES = [
 export default function CommandLine({ windowId, focusWindow }: CommandLineProps) {
 
     const { openWindow, closeWindow } = useWindowManager();
+    const windows = useWindowState();
+    const isWindowFocused = windows.find(w => w.id === windowId)?.focused ?? false;
     const [fileSystem, fileSystemLocation, processCommand, processAutofill, processUpdateFile] = useEmulatedFileSystem()
     const [lines, setLines] = useState<string[]>(BOOT_LINES);
     const [currentInput, setCurrentInput] = useState('');
@@ -59,6 +61,18 @@ export default function CommandLine({ windowId, focusWindow }: CommandLineProps)
         if(editorPath !== undefined && editorContents !== undefined)
             processUpdateFile(editorContents, editorPath)
     }, [editorContents])
+
+    // Redirect all keypresses to the hidden input when this window is focused and Vim is not open
+    useEffect(() => {
+        const handleGlobalKeyDown = () => {
+            if (!isWindowFocused || showEditor) return;
+            if (document.activeElement !== inputRef.current) {
+                inputRef.current?.focus();
+            }
+        };
+        document.addEventListener('keydown', handleGlobalKeyDown);
+        return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+    }, [isWindowFocused, showEditor]);
 
     const handleCommand = useCallback((raw: string): string[] | null => {
         return processCommand(raw, windowId, openWindow, closeWindow)
