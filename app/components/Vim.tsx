@@ -36,6 +36,11 @@ const Vim = ({ content, setContent, close }: VimProps) => {
     const clampCol = (col: number, line: string, insert: boolean) =>
         Math.max(0, Math.min(col, insert ? line.length : Math.max(0, line.length - 1)));
 
+    const firstNonBlank = (line: string): number => {
+        const idx = line.search(/\S/);
+        return idx === -1 ? 0 : idx;
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
         e.stopPropagation();
 
@@ -202,6 +207,9 @@ const Vim = ({ content, setContent, close }: VimProps) => {
             case '0':
             case 'Home':
                 setCursor(prev => ({ ...prev, col: 0 }));
+                break;
+            case '^':
+                setCursor(prev => ({ ...prev, col: firstNonBlank(line) }));
                 break;
             case '$':
             case 'End':
