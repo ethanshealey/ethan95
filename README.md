@@ -58,11 +58,20 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-A Firebase project with Firestore is required. Create a `.env.local` with the following variables before running:
+A Firebase project with Firestore and Realtime DB is required. Create a `.env.local` with the following variables before running:
 
 ```
-SCORE_SECRET=          # server-side HMAC key for score token signing
-NEXT_PUBLIC_SCORE_SECRET=  # matching key exposed to the client for token verification
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=
+
+SCORE_SECRET=                                  # Random UUID
+ADMIN_SECRET=                                  # Password for Admin access
+NEXT_PUBLIC_SCORE_SECRET=                      # Same UUID as SCORE_SECRET
 ```
 
 Configure your Firebase credentials as well (see `lib/firebase.ts`).
