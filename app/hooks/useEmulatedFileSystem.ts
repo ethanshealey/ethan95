@@ -104,8 +104,10 @@ export function useEmulatedFileSystem() {
 
     useEffect(() => {
         if (!hydrated.current) return;
-        console.log(fileSystem)
-        localStorage.setItem('filesystem', JSON.stringify(fileSystem));
+        const timer = setTimeout(() => {
+            localStorage.setItem('filesystem', JSON.stringify(fileSystem));
+        }, 500);
+        return () => clearTimeout(timer);
     }, [fileSystem])
 
     const tokenizeCommand = (raw: string): string[] => {

@@ -1,28 +1,20 @@
 'use client';
 
 import React from 'react';
-import { useWindowManager } from '../hooks/useWindowManager';
+import { useWindowState } from '../hooks/useWindowManager';
 import { getAppById } from '../applications/index';
 import ApplicationWindow from './ApplicationWindow';
-
 import { AppWindow } from '../context/WindowManagerContext';
 
 export default function ApplicationContainer() {
-  const { state } = useWindowManager();
+  const windows = useWindowState();
 
   return (
     <div className="application-container">
-      {state.windows.map((window: AppWindow) => {
+      {windows.map((window: AppWindow) => {
         const app = getAppById(window.appId);
         if (!app) return null;
-        
-        return (
-          <ApplicationWindow
-            key={window.id}
-            windowData={window}
-            app={app}
-          />
-        );
+        return <ApplicationWindow key={window.id} windowData={window} app={app} />;
       })}
     </div>
   );

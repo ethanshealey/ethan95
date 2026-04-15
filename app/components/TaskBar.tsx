@@ -4,20 +4,20 @@ import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { AppBar, Button, MenuList, MenuListItem, Toolbar, Frame, Separator } from 'react95'
 import { Icons } from '../icons/icons'
-import { useWindowManager } from '../hooks/useWindowManager'
+import { useWindowActions, useWindowState } from '../hooks/useWindowManager'
 import { getAppById } from '../applications/index'
 
 const TaskBar = () => {
 
-  const { openWindow, unfocusAll } = useWindowManager()
-  
+  const { openWindow, unfocusAll, toggleMinimize, focusWindow } = useWindowActions()
+  const windows = useWindowState()
+
   const [open, setOpen] = useState<boolean>(false)
   const [time, setTime] = useState<string>('')
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const trayScrollRef = useRef<HTMLDivElement>(null)
-  const { state, toggleMinimize, focusWindow } = useWindowManager()
 
   const updateScrollState = () => {
     const el = trayScrollRef.current
@@ -26,7 +26,7 @@ const TaskBar = () => {
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
   }
 
-  useEffect(() => { updateScrollState() }, [state.windows])
+  useEffect(() => { updateScrollState() }, [windows])
 
   const scroll = (dir: 'left' | 'right') => {
     const el = trayScrollRef.current
@@ -58,7 +58,7 @@ const TaskBar = () => {
   }, [open])
 
   const handleTrayItemClick = (windowId: string) => {
-    const window = state.windows.find(w => w.id === windowId)
+    const window = windows.find(w => w.id === windowId)
     if (window?.isMinimized) {
       toggleMinimize(windowId)
     } else {
@@ -209,7 +209,7 @@ const TaskBar = () => {
             onScroll={updateScrollState}
             style={{ display: 'flex', gap: 2, overflow: 'hidden', flex: 1, minWidth: 0 }}
           >
-            {state.windows.map(window => {
+            {windows.map(window => {
               const app = getAppById(window.appId)
               if (!app) return null
 

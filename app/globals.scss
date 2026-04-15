@@ -590,6 +590,11 @@ body, html {
   flex: 1;
 }
 
+.vim-selection {
+  background-color: #000080;
+  color: #fff;
+}
+
 .vim-cursor {
   &.vim-cursor--block {
     background-color: #c0c0c0;

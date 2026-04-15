@@ -1,4 +1,4 @@
-import React, { createContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useReducer, useCallback, useMemo, ReactNode } from 'react';
 import { getAppById, DEFAULT_WINDOW_SIZE } from '../applications/index';
 
 export interface AppWindow {
@@ -19,8 +19,7 @@ interface WindowManagerState {
   nextZIndex: number;
 }
 
-export interface WindowManagerContextType {
-  state: WindowManagerState;
+export interface WindowActionsType {
   openWindow: (appId: string, options?: { title?: string; props?: Record<string, unknown> }) => void;
   closeWindow: (id: string) => void;
   toggleMinimize: (id: string) => void;
@@ -29,6 +28,11 @@ export interface WindowManagerContextType {
   setSize: (id: string, width: number, height: number) => void;
   focusWindow: (id: string) => void;
   unfocusAll: () => void;
+}
+
+/** @deprecated Use useWindowActions / useWindowState instead */
+export interface WindowManagerContextType extends WindowActionsType {
+  state: WindowManagerState;
 }
 
 type Action =
@@ -71,49 +75,16 @@ function windowReducer(state: WindowManagerState, action: Action): WindowManager
         nextZIndex: state.nextZIndex + 1,
       };
     }
-
     case 'CLOSE_WINDOW':
-      return {
-        ...state,
-        windows: state.windows.filter(w => w.id !== action.payload),
-      };
-
+      return { ...state, windows: state.windows.filter(w => w.id !== action.payload) };
     case 'TOGGLE_MINIMIZE':
-      return {
-        ...state,
-        windows: state.windows.map(w =>
-          w.id === action.payload ? { ...w, isMinimized: !w.isMinimized } : w
-        ),
-      };
-
+      return { ...state, windows: state.windows.map(w => w.id === action.payload ? { ...w, isMinimized: !w.isMinimized } : w) };
     case 'TOGGLE_MAXIMIZE':
-      return {
-        ...state,
-        windows: state.windows.map(w =>
-          w.id === action.payload ? { ...w, isMaximized: !w.isMaximized } : w
-        ),
-      };
-
+      return { ...state, windows: state.windows.map(w => w.id === action.payload ? { ...w, isMaximized: !w.isMaximized } : w) };
     case 'SET_POSITION':
-      return {
-        ...state,
-        windows: state.windows.map(w =>
-          w.id === action.payload.id
-            ? { ...w, position: { x: action.payload.x, y: action.payload.y } }
-            : w
-        ),
-      };
-
+      return { ...state, windows: state.windows.map(w => w.id === action.payload.id ? { ...w, position: { x: action.payload.x, y: action.payload.y } } : w) };
     case 'SET_SIZE':
-      return {
-        ...state,
-        windows: state.windows.map(w =>
-          w.id === action.payload.id
-            ? { ...w, size: { width: action.payload.width, height: action.payload.height } }
-            : w
-        ),
-      };
-
+      return { ...state, windows: state.windows.map(w => w.id === action.payload.id ? { ...w, size: { width: action.payload.width, height: action.payload.height } } : w) };
     case 'FOCUS_WINDOW': {
       const maxZIndex = Math.max(...state.windows.map(w => w.zIndex), 0);
       return {
@@ -126,70 +97,73 @@ function windowReducer(state: WindowManagerState, action: Action): WindowManager
         nextZIndex: maxZIndex + 2,
       };
     }
-
     case 'UNFOCUS_ALL':
-      return {
-        ...state,
-        windows: state.windows.map(w => ({ ...w, focused: false })),
-      };
-
+      return { ...state, windows: state.windows.map(w => ({ ...w, focused: false })) };
     default:
       return state;
   }
 }
 
+// Fine-grained contexts — subscribe to only what you need
+export const WindowStateContext = createContext<AppWindow[]>([]);
+export const WindowActionsContext = createContext<WindowActionsType | undefined>(undefined);
+
+// Kept for backward compatibility — prefer the two above
 export const WindowManagerContext = createContext<WindowManagerContextType | undefined>(undefined);
 
 export function WindowManagerProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(windowReducer, initialState);
 
-  const openWindow = (appId: string, options?: { title?: string; props?: Record<string, unknown> }) => {
+  const openWindow = useCallback((appId: string, options?: { title?: string; props?: Record<string, unknown> }) => {
     dispatch({ type: 'OPEN_WINDOW', payload: { appId, ...options } });
-  };
+  }, []);
 
-  const closeWindow = (id: string) => {
+  const closeWindow = useCallback((id: string) => {
     dispatch({ type: 'CLOSE_WINDOW', payload: id });
-  };
+  }, []);
 
-  const toggleMinimize = (id: string) => {
+  const toggleMinimize = useCallback((id: string) => {
     dispatch({ type: 'TOGGLE_MINIMIZE', payload: id });
-  };
+  }, []);
 
-  const toggleMaximize = (id: string) => {
+  const toggleMaximize = useCallback((id: string) => {
     dispatch({ type: 'TOGGLE_MAXIMIZE', payload: id });
-  };
+  }, []);
 
-  const setPosition = (id: string, x: number, y: number) => {
+  const setPosition = useCallback((id: string, x: number, y: number) => {
     dispatch({ type: 'SET_POSITION', payload: { id, x, y } });
-  };
+  }, []);
 
-  const setSize = (id: string, width: number, height: number) => {
+  const setSize = useCallback((id: string, width: number, height: number) => {
     dispatch({ type: 'SET_SIZE', payload: { id, width, height } });
-  };
+  }, []);
 
-  const focusWindow = (id: string) => {
+  const focusWindow = useCallback((id: string) => {
     dispatch({ type: 'FOCUS_WINDOW', payload: id });
-  };
+  }, []);
 
-  const unfocusAll = () => {
+  const unfocusAll = useCallback(() => {
     dispatch({ type: 'UNFOCUS_ALL' });
-  };
+  }, []);
+
+  // Stable object — only changes if a callback identity changes (never, given empty deps)
+  const actions = useMemo<WindowActionsType>(() => ({
+    openWindow, closeWindow, toggleMinimize, toggleMaximize,
+    setPosition, setSize, focusWindow, unfocusAll,
+  }), [openWindow, closeWindow, toggleMinimize, toggleMaximize, setPosition, setSize, focusWindow, unfocusAll]);
+
+  // Legacy value — still provides full API for components that haven't migrated
+  const legacyValue = useMemo<WindowManagerContextType>(() => ({
+    state, ...actions,
+  }), [state, actions]);
 
   return (
-    <WindowManagerContext.Provider
-      value={{
-        state,
-        openWindow,
-        closeWindow,
-        toggleMinimize,
-        toggleMaximize,
-        setPosition,
-        setSize,
-        focusWindow,
-        unfocusAll,
-      }}
-    >
-      {children}
+    <WindowManagerContext.Provider value={legacyValue}>
+      <WindowActionsContext.Provider value={actions}>
+        <WindowStateContext.Provider value={state.windows}>
+          {children}
+        </WindowStateContext.Provider>
+      </WindowActionsContext.Provider>
     </WindowManagerContext.Provider>
   );
 }

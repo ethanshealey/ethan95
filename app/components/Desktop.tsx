@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import TaskBar from './TaskBar'
 import ApplicationContainer from './ApplicationContainer'
-import { useWindowManager } from '../hooks/useWindowManager'
+import { useWindowActions } from '../hooks/useWindowManager'
 import { APPLICATIONS, RegisteredApp } from '../applications/index'
 
 const TARGET_APPLICATIONS: string[] = ['my-computer', 'recycle-bin', 'my-documents', 'notepad', 'internet-explorer', 'games', 'weather', 'command-line', 'settings', 'compress']
@@ -12,7 +12,7 @@ const Desktop = () => {
 
   // const [ anchor, setAnchor ] = useState<string>(window?.location?.hash ?? '')
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
-  const { openWindow, unfocusAll } = useWindowManager()
+  const { openWindow, unfocusAll } = useWindowActions()
 
   useEffect(() => {
     const showWelcome = localStorage.getItem('showWelcome');

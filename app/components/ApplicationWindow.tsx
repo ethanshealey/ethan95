@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
-import { useWindowManager } from '../hooks/useWindowManager';
+import React, { Suspense, useRef, useState, useEffect, memo } from 'react';
+import { useWindowActions } from '../hooks/useWindowManager';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { AppWindow } from '../context/WindowManagerContext';
 import { RegisteredApp, DEFAULT_MIN_SIZE } from '../applications/index';
@@ -15,8 +15,8 @@ const MINIMIZE_EXCLUSION_LIST = ['Welcome'];
 const MAXIMIZE_EXCLUSION_LIST = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Solitaire', 'Solitaire Winner', 'Run'];
 const RESIZE_EXCLUSION_LIST   = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Minesweeper Records', 'Solitaire', 'Solitaire Winner', 'Solitaire Leaderboard', 'Run', 'Sudoku', 'Sudoku Winner', 'Sudoku Leaderboard'];
 
-export default function ApplicationWindow({ windowData, app }: ApplicationWindowProps) {
-  const { focusWindow, setPosition, setSize, toggleMinimize, toggleMaximize, closeWindow } = useWindowManager();
+const ApplicationWindow = memo(function ApplicationWindow({ windowData, app }: ApplicationWindowProps) {
+  const { focusWindow, setPosition, setSize, toggleMinimize, toggleMaximize, closeWindow } = useWindowActions();
   const isMobile = useIsMobile();
   const windowRef = useRef<HTMLDivElement>(null);
   const titleBarRef = useRef<HTMLDivElement>(null);
@@ -54,18 +54,12 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
-        setPosition(
-          windowData.id,
-          e.clientX - dragOffset.x,
-          e.clientY - dragOffset.y
-        );
+        setPosition(windowData.id, e.clientX - dragOffset.x, e.clientY - dragOffset.y);
       } else if (isResizing) {
         const deltaX = e.clientX - resizeStart.x;
         const deltaY = e.clientY - resizeStart.y;
         const minSize = app.minSize ?? DEFAULT_MIN_SIZE;
-        const newWidth = Math.max(resizeStart.width + deltaX, minSize.width);
-        const newHeight = Math.max(resizeStart.height + deltaY, minSize.height);
-        setSize(windowData.id, newWidth, newHeight);
+        setSize(windowData.id, Math.max(resizeStart.width + deltaX, minSize.width), Math.max(resizeStart.height + deltaY, minSize.height));
       }
     };
 
@@ -86,38 +80,16 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
     }
   }, [isDragging, isResizing, dragOffset, resizeStart, windowData.id, setPosition, setSize]);
 
-  if (windowData.isMinimized) {
-    return null;
-  }
+  if (windowData.isMinimized) return null;
 
   const AppContent = app.component;
   const isMaximized = windowData.isMaximized;
 
-  // On mobile: always fullscreen (no dragging/positioning)
   const windowStyle: React.CSSProperties = isMobile || isMaximized
-    ? {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: 'calc(100% - 50px)',
-        zIndex: windowData.zIndex,
-      }
+    ? { position: 'fixed', top: 0, left: 0, width: '100%', height: 'calc(100% - 50px)', zIndex: windowData.zIndex }
     : app.fitContent
-    ? {
-        position: 'fixed',
-        left: windowData.position.x,
-        top: windowData.position.y,
-        zIndex: windowData.zIndex,
-      }
-    : {
-        position: 'fixed',
-        left: windowData.position.x,
-        top: windowData.position.y,
-        width: windowData.size.width,
-        height: windowData.size.height,
-        zIndex: windowData.zIndex,
-      };
+    ? { position: 'fixed', left: windowData.position.x, top: windowData.position.y, zIndex: windowData.zIndex }
+    : { position: 'fixed', left: windowData.position.x, top: windowData.position.y, width: windowData.size.width, height: windowData.size.height, zIndex: windowData.zIndex };
 
   return (
     <div ref={windowRef} style={windowStyle} className="application-window" onClick={(e) => { e.stopPropagation(); focusWindow(windowData.id); }}>
@@ -128,43 +100,33 @@ export default function ApplicationWindow({ windowData, app }: ApplicationWindow
         onMouseDown={handleMouseDown}
       >
         <div className="title-bar-left">
-          { app.icon === 'NONE' ? null : <img src={app.icon} alt={app.name} className="window-icon" /> }  
+          {app.icon === 'NONE' ? null : <img src={app.icon} alt={app.name} className="window-icon" />}
           <span className="title-bar-text">{windowData.title}</span>
         </div>
         <div className="title-bar-buttons" data-no-drag>
-          { !MINIMIZE_EXCLUSION_LIST.includes(windowData.title) && <button
-            className="window-button minimize"
-            onClick={(e) => { e.stopPropagation(); toggleMinimize(windowData.id); }}
-            title="Minimize"
-          /> }
-          {!isMobile && !MAXIMIZE_EXCLUSION_LIST.includes(windowData.title) && (
-            <button
-              className="window-button maximize"
-              onClick={(e) => { e.stopPropagation(); toggleMaximize(windowData.id); }}
-              title="Maximize"
-            />
+          {!MINIMIZE_EXCLUSION_LIST.includes(windowData.title) && (
+            <button className="window-button minimize" onClick={(e) => { e.stopPropagation(); toggleMinimize(windowData.id); }} title="Minimize" />
           )}
-          <button
-            className="window-button close-button"
-            onClick={(e) => { e.stopPropagation(); closeWindow(windowData.id); }}
-            title="Close"
-          />
+          {!isMobile && !MAXIMIZE_EXCLUSION_LIST.includes(windowData.title) && (
+            <button className="window-button maximize" onClick={(e) => { e.stopPropagation(); toggleMaximize(windowData.id); }} title="Maximize" />
+          )}
+          <button className="window-button close-button" onClick={(e) => { e.stopPropagation(); closeWindow(windowData.id); }} title="Close" />
         </div>
       </div>
 
       {/* Content Area */}
       <div className="window-content" style={app.fitContent ? { flex: 'none' } : undefined} onClick={(e) => { e.stopPropagation(); focusWindow(windowData.id); }}>
-        <AppContent windowId={windowData.id} focusWindow={focusWindow} {...(windowData.props ?? {})} />
+        <Suspense fallback={<div style={{ padding: 16 }}>Loading...</div>}>
+          <AppContent windowId={windowData.id} focusWindow={focusWindow} {...(windowData.props ?? {})} />
+        </Suspense>
       </div>
 
-      {/* Resize Handle (bottom-right corner, desktop only) */}
+      {/* Resize Handle */}
       {!isMaximized && !isMobile && !RESIZE_EXCLUSION_LIST.includes(windowData.title) && (
-        <div
-          className="window-resize-handle"
-          onMouseDown={handleResizeStart}
-          data-no-drag
-        />
+        <div className="window-resize-handle" onMouseDown={handleResizeStart} data-no-drag />
       )}
     </div>
   );
-}
+});
+
+export default ApplicationWindow;
