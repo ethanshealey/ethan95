@@ -28,6 +28,7 @@ const Sudoku           = React.lazy(() => import('./Sudoku'));
 const SudokuWinner     = React.lazy(() => import('./SudokuWinner'));
 const SudokuLeaderboard = React.lazy(() => import('./SudokuLeaderboard'));
 const Compress         = React.lazy(() => import('./Compress'));
+const Calculator       = React.lazy(() => import('./Calculator'));
 
 export const DEFAULT_WINDOW_SIZE = { width: 500, height: 400 };
 export const DEFAULT_MIN_SIZE = { width: 300, height: 200 };
@@ -69,6 +70,7 @@ export const APPLICATIONS: RegisteredApp[] = [
   { id: 'sudoku-winner',         name: 'Sudoku Winner',         icon: Icons.WINREP,                         component: SudokuWinner,         fitContent: true },
   { id: 'sudoku-leaderboard',    name: 'Sudoku Leaderboard',    icon: Icons.WINREP,                         component: SudokuLeaderboard,    fitContent: true },
   { id: 'compress',              name: 'Image Compressor',      icon: Icons.KODAK_IMAGING,                  component: Compress },
+  { id: 'calculator',            name: 'Calculator',            icon: Icons.CALCULATOR,                     component: Calculator,           fitContent: true },
 ];
 
 export function getAppById(id: string): RegisteredApp | undefined {

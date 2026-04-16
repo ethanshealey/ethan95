@@ -289,11 +289,11 @@ export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
       textAlign: 'center',
       verticalAlign: 'middle',
       fontSize,
-      fontWeight: isGiven ? 'bold' : 'normal',
-      fontFamily: 'Arial, sans-serif',
+      fontWeight: isGiven ? 'bold' : '',
+      // fontFamily: 'Arial, sans-serif',
       cursor: 'pointer',
       touchAction: 'manipulation',
-      backgroundColor: isSel ? '#000080' : related ? '#c8d8e8' : isGiven ? '#c0c0c0' : '#ffffff',
+      backgroundColor: isSel ? '#000080' : related ? '#c8d8e8' : isGiven ? '#cacaca' : '#ffffff',
       color: isSel ? '#ffffff' : conflict ? '#cc0000' : isGiven ? '#000000' : '#000080',
       borderTop:    r % 3 === 0 ? '2px solid #000000' : '1px solid #808080',
       borderLeft:   c % 3 === 0 ? '2px solid #000000' : '1px solid #808080',
@@ -349,12 +349,9 @@ export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
         <Button variant='menu' size='sm' onClick={undo} disabled={history.length === 0}>
           Undo
         </Button>
-        <span style={{ marginLeft: 'auto', marginRight: 8, fontSize: 13, fontFamily: 'monospace', alignSelf: 'center' }}>
-          {formatTime(timer)}
-        </span>
       </Toolbar>
 
-      <div ref={boardFrameRef} style={{ display: 'inline-block' }}>
+      <div ref={boardFrameRef} style={isMobile ? { display: 'flex', justifyContent: 'center', width: '100%' } : { display: 'inline-block' }}>
       <Frame
         variant='well'
         style={{ display: 'inline-block', margin: '8px 8px 4px', touchAction: 'none' }}
@@ -404,13 +401,13 @@ export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
           </Button>
         </div>
       ) : (
-        // Single row on desktop
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 2, padding: '4px 8px 8px' }}>
+        // Two rows on desktop: 1–5 top, 6–9 + ✕ bottom
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 3, padding: '4px 8px 8px' }}>
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
             <Button
               key={n}
               size='sm'
-              style={{ minWidth: 0, padding: 0, height: 28, fontSize: 13, touchAction: 'manipulation' }}
+              style={{ minWidth: 0, padding: 0, height: 40, fontSize: 16, touchAction: 'manipulation' }}
               disabled={!canEdit}
               onClick={() => canEdit && placeNumber(n, selected!.row, selected!.col)}
             >
@@ -419,7 +416,7 @@ export default function Sudoku({ windowId, focusWindow }: SudokuProps) {
           ))}
           <Button
             size='sm'
-            style={{ minWidth: 0, padding: 0, height: 28, fontSize: 11, touchAction: 'manipulation' }}
+            style={{ minWidth: 0, padding: 0, height: 40, fontSize: 14, touchAction: 'manipulation' }}
             disabled={!canEdit}
             onClick={() => canEdit && placeNumber(0, selected!.row, selected!.col)}
           >

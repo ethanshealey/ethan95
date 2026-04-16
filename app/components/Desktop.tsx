@@ -6,7 +6,7 @@ import ApplicationContainer from './ApplicationContainer'
 import { useWindowActions } from '../hooks/useWindowManager'
 import { APPLICATIONS, RegisteredApp } from '../applications/index'
 
-const TARGET_APPLICATIONS: string[] = ['my-computer', 'recycle-bin', 'my-documents', 'notepad', 'internet-explorer', 'games', 'weather', 'command-line', 'settings', 'compress']
+const TARGET_APPLICATIONS: string[] = ['my-computer', 'recycle-bin', 'my-documents', 'notepad', 'internet-explorer', 'games', 'weather', 'command-line', 'settings', 'compress', 'calculator']
 
 const Desktop = () => {
 
