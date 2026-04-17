@@ -778,3 +778,30 @@ body, html {
     font-size: 11px;
   }
 }
+
+// Wordle
+@keyframes wordle-shake {
+  0%, 100% { transform: translateX(0); }
+  15%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
+}
+
+.wordle-shake {
+  animation: wordle-shake 0.55s ease-in-out;
+}
+
+.title {
+  padding-left: 15px;
+}
+
+.museum-item-wrapper {
+  margin-bottom: 10px;
+}
+.museum-title {
+  padding: 3px;
+}
+.museum-photo {
+  padding-top: 10px
+}

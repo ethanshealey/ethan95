@@ -27,8 +27,12 @@ const Run              = React.lazy(() => import('./Run'));
 const Sudoku           = React.lazy(() => import('./Sudoku'));
 const SudokuWinner     = React.lazy(() => import('./SudokuWinner'));
 const SudokuLeaderboard = React.lazy(() => import('./SudokuLeaderboard'));
-const Compress         = React.lazy(() => import('./Compress'));
-const Calculator       = React.lazy(() => import('./Calculator'));
+const Compress            = React.lazy(() => import('./Compress'));
+const Calculator          = React.lazy(() => import('./Calculator'));
+const Wordle              = React.lazy(() => import('./Wordle'));
+const WordleWinner        = React.lazy(() => import('./WordleWinner'));
+const WordleLeaderboard   = React.lazy(() => import('./WordleLeaderboard'));
+const Museum              = React.lazy(() => import('./Museum'));
 
 export const DEFAULT_WINDOW_SIZE = { width: 500, height: 400 };
 export const DEFAULT_MIN_SIZE = { width: 300, height: 200 };
@@ -71,6 +75,10 @@ export const APPLICATIONS: RegisteredApp[] = [
   { id: 'sudoku-leaderboard',    name: 'Sudoku Leaderboard',    icon: Icons.WINREP,                         component: SudokuLeaderboard,    fitContent: true },
   { id: 'compress',              name: 'Image Compressor',      icon: Icons.KODAK_IMAGING,                  component: Compress },
   { id: 'calculator',            name: 'Calculator',            icon: Icons.CALCULATOR,                     component: Calculator,           fitContent: true },
+  { id: 'wordle',                name: 'Wordle',                icon: Icons.CHARMAP,                        component: Wordle,               fitContent: true },
+  { id: 'wordle-winner',         name: 'Wordle Winner',         icon: Icons.CHARMAP,                        component: WordleWinner,         fitContent: true },
+  { id: 'wordle-leaderboard',    name: 'Wordle Leaderboard',    icon: Icons.CHARMAP,                        component: WordleLeaderboard,    fitContent: true },
+  { id: 'museum',                name: 'Museum',                icon: Icons.MUSEUM,                         component: Museum },
 ];
 
 export function getAppById(id: string): RegisteredApp | undefined {

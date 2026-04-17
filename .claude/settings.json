@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(find /c/Users/ethan/Documents/projects/ethan95 -not -path */node_modules/* -not -path */.next/* -not -path */.cache/* -type d)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:gist.githubusercontent.com)",
+      "Bash(curl -s \"https://gist.githubusercontent.com/cfreshman/cdcdf777450c5b5301e439061d29694c/raw/\")",
+      "Read(//tmp/**)"
     ]
   }
 }

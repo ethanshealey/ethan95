@@ -633,5 +633,6 @@ export const Icons = {
   WRITE_WORDPAD: "/static/icons/w98_write_wordpad.ico",
   WRITE_YELLOW: "/static/icons/w98_write_yellow.ico",
   XML: "/static/icons/w98_xml.ico",
-  XML_GEAR: "/static/icons/w98_xml_gear.ico"
+  XML_GEAR: "/static/icons/w98_xml_gear.ico",
+  MUSEUM: "/static/icons/w98_museum.ico"
 };
