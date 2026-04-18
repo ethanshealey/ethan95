@@ -6,19 +6,24 @@
 
 ## What This Is
 
-A Windows 95-inspired personal portfolio website. It simulates a full desktop environment — draggable/resizable windows, taskbar, desktop icons, Start menu, ~35 built-in applications. All "pages" are windows opened via the window manager. There is only one actual page route (`/`).
+A Windows 95-inspired personal portfolio website. It simulates a full desktop environment — draggable/resizable windows, taskbar, desktop icons, Start menu, ~35 built-in applications. All "pages" are windows opened via the window manager. There is only one actual page route (`/`). On mobile, windows go full-screen automatically.
 
 ---
 
 ## Tech Stack
 
 - **Next.js 16.2** — App Router, all interactive components are `'use client'`
+- **React 18.2** — (not 19; `@types/react` v19 is installed for type coverage only)
 - **React95 v4.0.0** — Windows 95 UI component library (buttons, menus, title bars, etc.)
 - **styled-components v5** — Required by React95; provides `ThemeProvider` (`original` theme)
 - **SCSS** — `globals.scss` (all layout/component styles), `crt.scss` (CRT monitor effects)
-- **Firebase 12** — Firestore (scores, photos, documents), Realtime DB (Minesweeper multiplayer)
+- **Firebase 12** — Firestore (scores, museum, photos), Realtime DB (Minesweeper multiplayer), Storage (museum images)
+- **react-draggable** — powers window drag behavior
+- **openmeteo** — weather forecast API client
+- **image-conversion** — client-side image compression
+- **dseg** — 7-segment LED font for game timers
 - **TypeScript 5**, **ESLint 9**
-- **patch-package** — Applies `patches/react95+4.0.0.patch` on `postinstall`
+- **patch-package** — applies `patches/react95+4.0.0.patch` on `postinstall`
 
 **The patch:** React95's `useIsFocusVisible` hook called `ReactDOM.findDOMNode()` which was removed in React 19. The patch replaces `findDOMNode(instance)` with `instance` directly — ref callbacks already receive the DOM node.
 
@@ -29,21 +34,29 @@ A Windows 95-inspired personal portfolio website. It simulates a full desktop en
 ```
 app/
   api/                      # Next.js API routes
-    admin/                  # CRUD for Firestore + auth
-    minesweeper/            # Score submission + leaderboard
-    solitaire/              # Score submission + leaderboard
-    sudoku/                 # Score submission + leaderboard
-    photos/route.ts         # SSE stream of album data
-    weather/route.ts        # Geocode + Open-Meteo proxy
-  applications/             # ~35 window app components
+    admin/                  #   CRUD for Firestore + auth + album scraper
+    minesweeper/            #   Score token + leaderboard
+    solitaire/              #   Score token + leaderboard
+    sudoku/                 #   Score token + leaderboard
+    wordle/                 #   Score token + leaderboard
+    museum/route.ts         #   GET grouped museum items from Firestore
+    photos/route.ts         #   SSE stream of album data
+    weather/route.ts        #   Geocode + Open-Meteo proxy
+  applications/             # All window app components (see registry below)
   components/               # Core UI components
-    minesweeper/            # Grid, tile, multiplayer hook
-    solitaire/              # Card component + web worker solver
+    minesweeper/            #   Grid, tile, multiplayer hook
+    solitaire/              #   Card component + web worker solver
+    Vim.tsx                 #   Full modal editor (~700 lines)
+    ApplicationWindow.tsx   #   Window chrome, drag/resize
+    TaskBar.tsx
+    Desktop.tsx
   context/
     WindowManagerContext.tsx
     SettingsContext.tsx
   hooks/
     useWindowManager.ts
+    useWindowState.ts
+    useWindowActions.ts
     useEmulatedFileSystem.ts
     useIsMobile.ts
   helpers/
@@ -55,9 +68,10 @@ app/
   layout.tsx
   page.tsx
 lib/
-  firebase.ts
+  firebase.ts               # Exports: db (Firestore), rtdb (Realtime DB), storage (Storage)
   admin-auth.ts             # HMAC-SHA256 session token signing
-  minesweeperRoom.ts
+  museum.ts                 # MuseumItem + MuseumResponse types
+  minesweeperRoom.ts        # Firebase Realtime DB room logic
 patches/
   react95+4.0.0.patch
 public/
@@ -117,9 +131,55 @@ Apps receive `windowId` and `focusWindow` as standard props always.
 
 **File:** `app/applications/index.ts`
 
-Every app has an entry: `{ id, name, component (lazy), icon, defaultSize?, excludeMinimize?, excludeMaximize? }`
+```typescript
+interface RegisteredApp {
+  id: string;
+  name: string;
+  icon: string;
+  component: React.ComponentType<any>;
+  fitContent?: boolean;   // window sizes to content instead of using default size
+  minSize?: { width: number; height: number };
+}
+```
 
-To add a new app: create the component, add it to the registry, and it becomes available via `openWindow('id')`, the Programs list, and the Run dialog.
+All components are loaded with `React.lazy`. To add a new app: create the component, add it to the `APPLICATIONS` array, and it becomes available via `openWindow('id')`, the Programs list, and the Run dialog.
+
+### Full app registry (id → name)
+
+| id | name |
+|----|------|
+| `welcome` | Welcome |
+| `notepad` | Notepad |
+| `my-computer` | My Computer |
+| `recycle-bin` | Recycle Bin |
+| `my-documents` | My Documents |
+| `photos` | My Pictures |
+| `photo-viewer` | Photo Viewer |
+| `document-viewer` | Document Viewer |
+| `internet-explorer` | Internet Explorer |
+| `my-projects` | My Projects |
+| `programs` | Programs |
+| `games` | Games |
+| `minesweeper` | Minesweeper |
+| `minesweeper-winner` | Minesweeper Winner |
+| `minesweeper-records` | Minesweeper Records |
+| `solitaire` | Solitaire |
+| `solitaire-winner` | Solitaire Winner |
+| `solitaire-leaderboard` | Solitaire Leaderboard |
+| `admin` | Admin |
+| `settings` | Settings |
+| `command-line` | Command Line |
+| `run` | Run |
+| `weather` | Weather |
+| `sudoku` | Sudoku |
+| `sudoku-winner` | Sudoku Winner |
+| `sudoku-leaderboard` | Sudoku Leaderboard |
+| `compress` | Image Compressor |
+| `calculator` | Calculator |
+| `wordle` | Wordle |
+| `wordle-winner` | Wordle Winner |
+| `wordle-leaderboard` | Wordle Leaderboard |
+| `museum` | Museum |
 
 ---
 
@@ -138,25 +198,35 @@ To add a new app: create the component, add it to the registry, and it becomes a
 | Internet Explorer | `InternetExplorer.tsx` | URL bar + iframe; preset bookmarks |
 | Notepad | `Notepad.tsx` | `<textarea>` with monospace styling; accepts `defaultContent` prop |
 | Document Viewer | `DocumentViewer.tsx` | PDF in iframe |
-| Admin | `Admin.tsx` | Password-protected Firestore CRUD panel; album scraper |
-| Image Compressor | `Compress.tsx` | Client-side image compression via `image-conversion` |
+| Admin | `Admin.tsx` | Password-protected Firestore CRUD panel. Collection picker is a `SelectNative` dropdown. Museum collections show an image upload button (uploads to Firebase Storage, populates the `image` field with the download URL). Editable collections: `minesweeper`, `albums`, `solitaire`, `sudoku`, `museum_cameras`, `museum_computers`, `museum_consoles` |
+| Image Compressor | `Compress.tsx` | Client-side image compression via `image-conversion`; quality slider (0–100) |
+| Calculator | `Calculator.tsx` | Standard four-function calculator; keyboard support |
 
-### Media
+### Media & Portfolio
 | App | File | Notes |
 |-----|------|-------|
 | Photos | `Photos.tsx` | SSE stream from `/api/photos`; thumbnail grid; paginated 24/page |
 | Photo Viewer | `PhotoViewer.tsx` | Full-size image; receives `src` prop |
 | My Projects | `MyProjects.tsx` | Portfolio project cards with demo/GitHub links |
 | Weather | `Weather.tsx` | City search → `/api/weather` → Open-Meteo 7-day forecast |
+| Museum | `Museum.tsx` | Virtual museum with three tabs (Cameras, Consoles, Computers). Data from `/api/museum` → Firestore collections `museum_cameras`, `museum_computers`, `museum_consoles`. Each item: `{ name, image, year, description }`. Items are ordered by `year` asc. Images hosted in Firebase Storage under `museum/{collection}/`. Uses `MuseumGroup.tsx` for rendering |
 
 ### Games
 | App | File | Notes |
 |-----|------|-------|
 | Games | `Games.tsx` | Hub launcher for games |
-| Minesweeper | `Minesweeper.tsx` | Beginner/Intermediate/Expert; first click safe; multiplayer via Firebase |
+| Minesweeper | `Minesweeper.tsx` | Beginner/Intermediate/Expert; first click safe; flood-fill reveal; multiplayer via Firebase Realtime DB |
 | Minesweeper Records | `MinesweeperRecords.tsx` | Leaderboard by difficulty |
-| Solitaire | `Solitaire.tsx` | Klondike; drag/drop; undo; web worker solver hint; win leaderboard |
-| Sudoku | `Sudoku.tsx` | 9×9; 3 difficulties; arrow key nav; conflict highlighting; win leaderboard |
+| Minesweeper Winner | `MinesweeperWinner.tsx` | Score submission dialog |
+| Solitaire | `Solitaire.tsx` | Klondike; drag/drop + tap-to-select; undo; web worker solver hint |
+| Solitaire Winner | `SolitaireWinner.tsx` | Win submission dialog |
+| Solitaire Leaderboard | `SolitaireLeaderboard.tsx` | Win-count leaderboard |
+| Sudoku | `Sudoku.tsx` | 9×9; Easy/Medium/Hard; arrow key nav; conflict + related-cell highlighting; undo; win timer |
+| Sudoku Winner | `SudokuWinner.tsx` | Win submission dialog |
+| Sudoku Leaderboard | `SudokuLeaderboard.tsx` | Win-count leaderboard |
+| Wordle | `Wordle.tsx` | Six-guess word game; color-coded tile feedback; on-screen QWERTY keyboard |
+| Wordle Winner | `WordleWinner.tsx` | Win submission dialog |
+| Wordle Leaderboard | `WordleLeaderboard.tsx` | Leaderboard by wins + best guess count |
 
 ### CLI
 | App | File | Notes |
@@ -263,31 +333,54 @@ Persisted to localStorage. Controls CRT scanline/flicker effect (crt.scss applie
 
 - **MS Sans Serif** loaded from `/public/fonts/` (WOFF2); applied globally
 - **React95 components** styled via styled-components + `original` theme
-- **globals.scss** — all custom styles: window chrome, desktop, CLI terminal, Vim editor, games, photo gallery, etc.
+- **globals.scss** — all custom styles: window chrome, desktop, CLI terminal, Vim editor, games, photo gallery, museum, etc.
 - **crt.scss** — scanlines overlay, flicker animation, turn-on/off transitions; disabled via class toggle
 
 The window title bar goes blue (focused) / gray (unfocused) based on the `focused` class applied in `ApplicationWindow.tsx`.
 
 ---
 
+## Firestore Collections
+
+| Collection | Used by | Notes |
+|------------|---------|-------|
+| `minesweeper` | Minesweeper leaderboard | Fields: `username`, `time`, `difficulty`, `createdAt` |
+| `solitaire` | Solitaire leaderboard | Fields: `username`, `wins`, `lastWin` |
+| `sudoku` | Sudoku leaderboard | Fields: `username`, `wins`, `lastWin` |
+| `wordle` | Wordle leaderboard | Fields: `username`, `wins`, `bestGuesses`, `lastWin` |
+| `albums` | Photos app | Fields: `url`, `title`, `thumb`, `links` (array), `index`, `create_ts` |
+| `museum_cameras` | Museum (Cameras tab) | Fields: `name`, `image` (Storage URL), `year` (number), `description` |
+| `museum_computers` | Museum (Computers tab) | Same shape as museum_cameras |
+| `museum_consoles` | Museum (Consoles tab) | Same shape as museum_cameras |
+
+Museum items are queried with `orderBy('year', 'asc')`.
+
+---
+
+## Firebase Storage
+
+Museum item images are stored at `museum/{collection}/{timestamp}-{random}.{ext}` and uploaded directly from the browser in the Admin panel using the Firebase client SDK (`uploadBytes` + `getDownloadURL`). Ensure Storage security rules allow writes to `museum/` for admin use.
+
+---
+
 ## API Routes & Security
 
-### Score verification (all three games)
+### Score verification (four games: minesweeper, solitaire, sudoku, wordle)
 1. On win, client posts to `/api/<game>/token` → server issues `HMAC-SHA256(payload, SCORE_SECRET)` + timestamp
 2. Client submits score with token to `PUT /api/<game>`
 3. Server re-derives HMAC and validates before writing to Firestore
 
 ### Admin auth
 - `POST /api/admin/auth` — validates password, returns `{hmac}.{timestamp}` token (1-hour expiry)
-- All admin routes require valid token in header
-- Uses time-safe comparison
+- All admin routes require `Authorization: Bearer <token>` header
+- Uses time-safe comparison (`timingSafeEqual`)
 
 ### Environment variables needed
 ```
 SCORE_SECRET               # HMAC key for game scores
-NEXT_PUBLIC_SCORE_SECRET   # Same, exposed to client for token request
+NEXT_PUBLIC_SCORE_SECRET   # Same value, exposed to client for token request
 ADMIN_SECRET               # HMAC key for admin sessions
-NEXT_PUBLIC_FIREBASE_*     # Firebase config
+NEXT_PUBLIC_FIREBASE_*     # Firebase config (7 vars)
 ```
 
 ---
@@ -301,19 +394,3 @@ npm run start     # next start
 ```
 
 `scripts/scrape-albums.mjs` runs pre-build to pull album metadata into cache.
-
----
-
-## Recent Development History (as of 2026-04-15)
-
-The project grew from a basic window manager outward:
-- Window manager + desktop core
-- Minesweeper (single → multiplayer via Firebase)
-- HMAC score signing for all games
-- Solitaire (Klondike + web worker solver)
-- Sudoku
-- Admin panel (Firestore CRUD + album scraper)
-- CLI enhancements (Vim integration, new commands)
-- Image compressor
-- Visual mode in Vim
-- Global keydown redirect for CLI focus

@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { Frame, Button, TextInput } from 'react95';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Frame, Button, TextInput, SelectNative } from 'react95';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
 
 interface AdminProps {
   windowId: string;
@@ -10,8 +12,22 @@ interface AdminProps {
 
 type DocData = Record<string, unknown>;
 
-const COLLECTIONS = ['minesweeper', 'albums', 'solitaire', 'sudoku'] as const;
+const COLLECTIONS = [
+  'minesweeper', 'albums', 'solitaire', 'sudoku',
+  'museum_cameras', 'museum_computers', 'museum_consoles',
+] as const;
 type Collection = (typeof COLLECTIONS)[number];
+
+const COLLECTION_OPTIONS = COLLECTIONS.map((col) => ({
+  value: col,
+  label: col === 'museum_cameras'   ? 'Museum: Cameras'
+       : col === 'museum_computers' ? 'Museum: Computers'
+       : col === 'museum_consoles'  ? 'Museum: Consoles'
+       : col.charAt(0).toUpperCase() + col.slice(1),
+}));
+
+const MUSEUM_COLLECTIONS = new Set<Collection>(['museum_cameras', 'museum_computers', 'museum_consoles']);
+const MUSEUM_DEFAULT_FIELDS = ['name', 'image', 'year', 'description'] as const;
 
 // Fields shown read-only (not editable)
 const READONLY_FIELDS = new Set(['id', 'createdAt', 'create_ts']);
@@ -27,6 +43,13 @@ function getColumns(docs: DocData[]): string[] {
   const keys = new Set<string>();
   docs.forEach((d) => Object.keys(d).forEach((k) => keys.add(k)));
   return ['id', ...Array.from(keys).filter((k) => k !== 'id')];
+}
+
+/** Coerce museum field types before writing to Firestore. */
+function coerceMuseumFields(fields: Record<string, string>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...fields };
+  if (typeof out.year === 'string' && out.year !== '') out.year = Number(out.year);
+  return out;
 }
 
 export default function Admin({ windowId, focusWindow }: AdminProps) {
@@ -47,6 +70,10 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
   const [scrapeUrl, setScrapeUrl] = useState('');
   const [scraping, setScraping] = useState(false);
   const [scrapeError, setScrapeError] = useState('');
+
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     document.getElementById(windowId)?.focus();
@@ -82,6 +109,7 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
     setIsAdding(false);
     setScrapeUrl('');
     setScrapeError('');
+    setUploadError('');
     try {
       const res = await fetch(`/api/admin/${col}`, {
         headers: { Authorization: `Bearer ${tok}` },
@@ -112,13 +140,36 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
   };
 
   const startAdd = () => {
-    const autoFields = activeCollection === 'albums' ? new Set([...READONLY_FIELDS, 'index']) : READONLY_FIELDS;
-    const editableColumns = getColumns(docs).filter((k) => !autoFields.has(k));
-    setEditFields(Object.fromEntries(editableColumns.map((k) => [k, ''])));
+    let defaultFields: string[];
+    if (MUSEUM_COLLECTIONS.has(activeCollection)) {
+      defaultFields = [...MUSEUM_DEFAULT_FIELDS];
+    } else {
+      const autoFields = activeCollection === 'albums' ? new Set([...READONLY_FIELDS, 'index']) : READONLY_FIELDS;
+      defaultFields = getColumns(docs).filter((k) => !autoFields.has(k));
+    }
+    setEditFields(Object.fromEntries(defaultFields.map((k) => [k, ''])));
     setEditingDoc(null);
     setIsAdding(true);
     setScrapeUrl('');
     setScrapeError('');
+    setUploadError('');
+  };
+
+  const uploadImage = async (file: File) => {
+    setUploading(true);
+    setUploadError('');
+    try {
+      const ext = file.name.split('.').pop() ?? 'jpg';
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const fileRef = storageRef(storage, `museum/${activeCollection}/${filename}`);
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      setEditFields((prev) => ({ ...prev, image: url }));
+    } catch {
+      setUploadError('Upload failed. Check Storage rules.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleScrape = async () => {
@@ -151,11 +202,16 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
     if (!token) return;
     setSaving(true);
     try {
-      const body: Record<string, unknown> = activeCollection === 'albums'
-        ? { ...editFields, index: docs.length }
-        : { ...editFields };
-      if (activeCollection === 'albums' && typeof body.links === 'string') {
-        try { body.links = JSON.parse(body.links as string); } catch { /* leave as-is */ }
+      let body: Record<string, unknown>;
+      if (activeCollection === 'albums') {
+        body = { ...editFields, index: docs.length };
+        if (typeof body.links === 'string') {
+          try { body.links = JSON.parse(body.links as string); } catch { /* leave as-is */ }
+        }
+      } else if (MUSEUM_COLLECTIONS.has(activeCollection)) {
+        body = coerceMuseumFields(editFields);
+      } else {
+        body = { ...editFields };
       }
       const res = await fetch(`/api/admin/${activeCollection}`, {
         method: 'POST',
@@ -182,20 +238,24 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
     setIsAdding(false);
     setEditingDoc(docItem);
     setEditFields(fields);
+    setUploadError('');
   };
 
   const saveEdit = async () => {
     if (!token || !editingDoc) return;
     setSaving(true);
     try {
+      const payload: Record<string, unknown> = MUSEUM_COLLECTIONS.has(activeCollection)
+        ? coerceMuseumFields(editFields)
+        : { ...editFields };
       const res = await fetch(`/api/admin/${activeCollection}/${editingDoc.id}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(editFields),
+        body: JSON.stringify(payload),
       });
       if (res.status === 401) { setToken(null); return; }
       setDocs((prev) =>
-        prev.map((d) => (d.id === editingDoc.id ? { ...d, ...editFields } : d))
+        prev.map((d) => (d.id === editingDoc.id ? { ...d, ...payload } : d))
       );
       setEditingDoc(null);
     } finally {
@@ -234,6 +294,7 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
   }
 
   const columns = getColumns(docs);
+  const isMuseum = MUSEUM_COLLECTIONS.has(activeCollection);
 
   return (
     <div className="app-content" onClick={stop}
@@ -241,15 +302,12 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
 
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-        {COLLECTIONS.map((col) => (
-          <Button
-            key={col}
-            onClick={() => setActiveCollection(col)}
-            style={{ fontWeight: activeCollection === col ? 'bold' : 'normal' }}
-          >
-            {col}
-          </Button>
-        ))}
+        <SelectNative
+          options={COLLECTION_OPTIONS}
+          value={activeCollection}
+          onChange={(opt: { value: string }) => setActiveCollection(opt.value as Collection)}
+          width="180px"
+        />
         <Button onClick={startAdd} disabled={loading} style={{ marginLeft: 'auto' }}>
           Add
         </Button>
@@ -265,6 +323,8 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
           <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '8px' }}>
             {isAdding ? 'New Document' : `Editing: ${String(editingDoc!.id)}`}
           </div>
+
+          {/* Albums: scrape helper */}
           {isAdding && activeCollection === 'albums' && (
             <div style={{ marginBottom: '10px' }}>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -285,26 +345,67 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
               )}
             </div>
           )}
+
+          {/* Hidden file input for museum image upload */}
+          {isMuseum && (
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadImage(file);
+                // Reset so same file can be re-selected
+                e.target.value = '';
+              }}
+            />
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '6px', alignItems: 'center' }}>
             {Object.entries(editFields).map(([key, val]) => (
               <React.Fragment key={key}>
                 <span style={{ fontSize: '11px' }}>{key}:</span>
-                <TextInput
-                  value={val}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setEditFields((prev) => ({ ...prev, [key]: e.target.value }))
-                  }
-                  fullWidth
-                />
+                {key === 'image' && isMuseum ? (
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <TextInput
+                      value={val}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setEditFields((prev) => ({ ...prev, [key]: e.target.value }))
+                      }
+                      fullWidth
+                    />
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      {uploading ? '...' : 'Upload'}
+                    </Button>
+                  </div>
+                ) : (
+                  <TextInput
+                    value={val}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setEditFields((prev) => ({ ...prev, [key]: e.target.value }))
+                    }
+                    fullWidth
+                  />
+                )}
               </React.Fragment>
             ))}
           </div>
+
+          {uploadError && (
+            <div style={{ color: 'red', fontSize: '11px', marginTop: '6px' }}>{uploadError}</div>
+          )}
+
           <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
             {isAdding
-              ? <Button onClick={saveAdd} disabled={saving}>{saving ? 'Adding...' : 'Add'}</Button>
-              : <Button onClick={saveEdit} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+              ? <Button onClick={saveAdd} disabled={saving || uploading}>{saving ? 'Adding...' : 'Add'}</Button>
+              : <Button onClick={saveEdit} disabled={saving || uploading}>{saving ? 'Saving...' : 'Save'}</Button>
             }
-            <Button onClick={() => { setEditingDoc(null); setIsAdding(false); }}>Cancel</Button>
+            <Button onClick={() => { setEditingDoc(null); setIsAdding(false); setUploadError(''); }}>Cancel</Button>
           </div>
         </Frame>
       )}

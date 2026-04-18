@@ -1,53 +1,93 @@
 # ethan95
 
-A Windows 95-inspired personal portfolio built with Next.js. It simulates a classic desktop environment complete with draggable/resizable windows, a taskbar, desktop icons, and a suite of built-in applications. On mobile, windows go full-screen automatically.
+A Windows 95-inspired personal portfolio built with Next.js. It simulates a complete desktop environment — draggable/resizable windows, a taskbar with Start menu, desktop icons, and a suite of built-in applications. There is a single page route (`/`); everything opens as a window. On mobile, all windows switch to full-screen automatically.
 
 ## Applications
 
+### System
+
 | App | Description |
 |-----|-------------|
-| **Welcome** | Startup tips dialog with "show on startup" preference (persisted via `localStorage`) |
-| **My Computer** | Classic Windows 95 file system explorer |
-| **My Documents** | Browse and open résumé and other personal documents |
-| **My Pictures** | Photo gallery backed by Firestore, streamed via SSE with pagination and lazy loading |
-| **Photo Viewer** | Full-size image viewer opened from My Pictures |
-| **Document Viewer** | In-app document renderer |
-| **My Projects** | Portfolio of personal projects |
-| **Internet Explorer** | Embedded browser window |
-| **Notepad** | Plain-text editor |
-| **Recycle Bin** | Recycle Bin (it's empty) |
-| **Programs** | App launcher listing all registered applications |
-| **Games** | Games hub — opens Minesweeper, Solitaire, or Sudoku |
-| **Minesweeper** | Beginner / Intermediate / Expert difficulties; flood fill, flagging, safe first click; HMAC-signed score submission |
-| **Minesweeper Records** | Firestore leaderboard sorted by best time per difficulty |
-| **Solitaire** | Classic Klondike solitaire with drag-and-drop, tap-to-select, undo, solver hint, and skip; HMAC-signed win leaderboard |
-| **Sudoku** | 9×9 puzzle with Easy / Medium / Hard difficulties; conflict highlighting, related-cell shading, undo, and timer; responsive board (fills available width on mobile); HMAC-signed win leaderboard |
-| **Weather** | Search any city for current conditions and a 7-day high/low forecast, powered by Open-Meteo |
-| **Command Line** | ETHAN-DOS 6.22 emulator with a fully emulated filesystem (persisted to `localStorage`). Commands: `CD/CHDIR`, `CLS/CLEAR`, `CAT`, `DATE`, `DEL/RM [-r]`, `DIR/LS`, `ECHO`, `EDIT/VI/VIM`, `EXIT`, `HELP`, `MKDIR`, `PROGRAMS`, `RUN`, `TIME`, `TOUCH`, `VER`. Features command history (↑ / ↓), double-Tab autocomplete, and an embedded Vim editor for file editing |
-| **Image Compressor** | Client-side image compressor — upload any image, set a quality level with a slider (0–100), and download the compressed result; powered by `image-conversion` |
-| **Run** | Open any registered application by ID |
+| **Welcome** | Startup tips carousel with a "show on startup" checkbox (persisted to `localStorage`) |
+| **My Computer** | Classic drive browser (A:, C:, D:) |
+| **My Documents** | Launcher for Photos, My Projects, Document Viewer, and Notepad |
+| **Programs** | Full list of every registered application; click to open |
+| **Run** | Open any app by typing its registered ID |
 | **Settings** | Toggle the CRT monitor effect on/off |
-| **Admin** | Password-protected admin panel for managing Firestore content |
+| **Recycle Bin** | Intentionally empty |
+| **Internet Explorer** | Embedded browser (`<iframe>`) with a URL bar and preset bookmarks |
+| **Notepad** | Plain-text editor; accepts a `defaultContent` prop for pre-filled content |
+| **Document Viewer** | PDF renderer (PDF in `<iframe>`) |
+| **Admin** | Password-protected Firestore CRUD panel with support for all content collections and museum image uploads to Firebase Storage |
+| **Image Compressor** | Client-side image compression — upload an image, adjust quality with a slider (0–100), and download the result; powered by `image-conversion` |
+| **Calculator** | Standard four-function calculator with keyboard support |
+
+### Portfolio
+
+| App | Description |
+|-----|-------------|
+| **Photos** | Album photo gallery backed by Firestore, streamed as Server-Sent Events; paginated 24 photos per page with thumbnail grid |
+| **Photo Viewer** | Full-size image viewer opened from Photos |
+| **My Projects** | Portfolio project cards with demo and GitHub links |
+| **Museum** | Virtual museum of vintage and retro items organized into three tabbed categories — Cameras, Consoles, and Computers — loaded from Firestore |
+| **Weather** | Search any city for current conditions and a 7-day high/low forecast, powered by Open-Meteo |
+
+### Games
+
+| App | Description |
+|-----|-------------|
+| **Games** | Hub launcher for all games |
+| **Minesweeper** | Beginner / Intermediate / Expert difficulties; flood-fill reveal; safe first click; real-time multiplayer via Firebase Realtime Database; HMAC-signed score submission |
+| **Minesweeper Records** | Leaderboard sorted by best time per difficulty |
+| **Solitaire** | Klondike with drag-and-drop and tap-to-select, undo, web-worker solver hint; HMAC-signed win leaderboard |
+| **Solitaire Leaderboard** | Win counts leaderboard |
+| **Sudoku** | 9×9 puzzle with Easy / Medium / Hard difficulties; arrow-key navigation; conflict and related-cell highlighting; undo; win timer; HMAC-signed win leaderboard |
+| **Sudoku Leaderboard** | Win counts leaderboard |
+| **Wordle** | Six-guess word game with color-coded tile feedback and an on-screen keyboard; HMAC-signed win leaderboard |
+| **Wordle Leaderboard** | Win counts and best-guess-count leaderboard |
+
+### CLI
+
+| App | Description |
+|-----|-------------|
+| **Command Line** | ETHAN-DOS 6.22 emulator with a fully emulated filesystem persisted to `localStorage`. Supports command history (↑ / ↓) and double-Tab autocomplete. Includes an embedded Vim editor (`vim` / `vi` / `edit`) with Normal, Insert, Visual, and Command modes |
+
+**Supported commands:** `cd`, `ls` / `dir`, `mkdir`, `cat`, `touch`, `echo`, `vim` / `vi` / `edit`, `rm` / `del`, `cls` / `clear`, `date`, `time`, `help`, `ver`, `programs`, `run <app-id>`, `exit`
+
+---
 
 ## Features
 
-- **Window management** — drag, resize, minimize, maximize, and close windows; z-order focus tracking
-- **Mobile-responsive** — windows switch to full-screen on viewports ≤ 768 px; game boards scale to fill available width
-- **CRT monitor effect** — animated power-on/off with scanline overlay, toggleable in Settings
-- **HMAC-signed scores** — Minesweeper, Solitaire, and Sudoku scores are signed server-side before being written to Firestore, preventing spoofed submissions
-- **Firestore photo streaming** — albums streamed as Server-Sent Events (SSE) for real-time updates
+- **Window management** — drag, resize, minimize, maximize, and close; automatic z-order and focus tracking
+- **Mobile-responsive** — full-screen windows on viewports ≤ 768 px; game boards scale to fill available width
+- **CRT monitor effect** — power-on/off animation with scanline overlay, toggled in Settings
+- **HMAC-signed scores** — Minesweeper, Solitaire, Sudoku, and Wordle scores are signed server-side before Firestore writes, preventing spoofed submissions
+- **SSE photo streaming** — album data streamed as Server-Sent Events from `/api/photos`
+- **Emulated filesystem** — localStorage-backed virtual filesystem with path resolution (`.`, `..`, `~`)
+- **Vim in the terminal** — full modal editor embedded inside the CLI with Normal, Insert, Visual, and Command modes
+- **Minesweeper multiplayer** — shared game rooms via Firebase Realtime Database
+- **Museum image upload** — Admin panel uploads museum item images directly to Firebase Storage from the browser
 - **Classic Windows 95 UI** — authentic look and feel via [React95](https://github.com/React95/React95) and MS Sans Serif
+
+---
 
 ## Tech Stack
 
-- [Next.js](https://nextjs.org/) 16.2 (App Router)
-- [React](https://react.dev/) 18
-- [React95](https://github.com/React95/React95) — Windows 95 component library
-- [styled-components](https://styled-components.com/) 5
-- [Firebase](https://firebase.google.com/) 12 (Firestore)
-- [openmeteo](https://github.com/open-meteo/javascript-api) — weather data
-- [dseg](https://github.com/keshikan/DSEG) — digital segment font
-- SCSS / TypeScript
+| | |
+|---|---|
+| [Next.js](https://nextjs.org/) 16.2 | App Router, all interactive components are `'use client'` |
+| [React](https://react.dev/) 18 | |
+| [React95](https://github.com/React95/React95) 4.0 | Windows 95 component library |
+| [styled-components](https://styled-components.com/) 5 | Required by React95; provides `ThemeProvider` |
+| [Firebase](https://firebase.google.com/) 12 | Firestore, Realtime Database, Storage |
+| [openmeteo](https://github.com/open-meteo/javascript-api) | Weather data |
+| [react-draggable](https://github.com/react-grid-layout/react-draggable) | Window drag behavior |
+| [image-conversion](https://github.com/WangYuLue/image-conversion) | Client-side image compression |
+| [dseg](https://github.com/keshikan/DSEG) | 7-segment LED font for game timers |
+| SCSS, TypeScript 5, ESLint 9 | |
+| [patch-package](https://github.com/ds300/patch-package) | Patches React95 for React 19 compatibility |
+
+---
 
 ## Getting Started
 
@@ -56,11 +96,23 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000).
 
-A Firebase project with Firestore and Realtime DB is required. Create a `.env.local` with the following variables before running:
+The build step runs `scripts/scrape-albums.mjs` before `next build` to populate album cache:
 
+```bash
+npm run build
+npm run start
 ```
+
+---
+
+## Environment Variables
+
+Create a `.env.local` in the project root:
+
+```env
+# Firebase (client-side)
 NEXT_PUBLIC_FIREBASE_API_KEY=
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=
@@ -69,49 +121,106 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 NEXT_PUBLIC_FIREBASE_APP_ID=
 NEXT_PUBLIC_FIREBASE_DATABASE_URL=
 
-SCORE_SECRET=                                  # Random UUID
-ADMIN_SECRET=                                  # Password for Admin access
-NEXT_PUBLIC_SCORE_SECRET=                      # Same UUID as SCORE_SECRET
+# HMAC signing for game scores (use the same random secret for both)
+SCORE_SECRET=
+NEXT_PUBLIC_SCORE_SECRET=
+
+# HMAC key for admin session tokens
+ADMIN_SECRET=
 ```
 
-Configure your Firebase credentials as well (see `lib/firebase.ts`).
+Firebase services required: **Firestore**, **Realtime Database**, **Storage**.
+
+---
 
 ## API Routes
 
+### Games
+
 | Method | Route | Description |
 |--------|-------|-------------|
-| `POST` | `/api/minesweeper/token` | Issues a short-lived HMAC token for a score submission |
-| `GET`  | `/api/minesweeper` | Returns top scores per difficulty, sorted by time ascending |
-| `PUT`  | `/api/minesweeper` | Submits a verified score `{ username, time, difficulty, token, secureToken }` |
-| `POST` | `/api/solitaire/token` | Issues a short-lived HMAC token for a win submission |
-| `GET`  | `/api/solitaire` | Returns the Solitaire win leaderboard, sorted by wins descending |
-| `PUT`  | `/api/solitaire` | Submits a verified win `{ username, token, secureToken }` |
-| `POST` | `/api/sudoku/token` | Issues a short-lived HMAC token for a win submission |
-| `GET`  | `/api/sudoku` | Returns the Sudoku win leaderboard, sorted by wins descending |
-| `PUT`  | `/api/sudoku` | Submits a verified win `{ username, token, secureToken }` |
-| `GET`  | `/api/weather` | Geocodes a city name and proxies current + 7-day forecast from Open-Meteo |
-| `GET`  | `/api/photos` | Streams Firestore album data as Server-Sent Events |
-| `GET/POST/PUT/DELETE` | `/api/admin/[collection]` | CRUD operations on Firestore collections (admin auth required) |
-| `GET/PUT/DELETE` | `/api/admin/[collection]/[docId]` | Single-document operations (admin auth required) |
-| `POST` | `/api/admin/auth` | Admin login |
-| `POST` | `/api/admin/albums/scrape` | Scrapes album metadata into Firestore |
+| `POST` | `/api/minesweeper/token` | Issue a short-lived HMAC token for a score submission |
+| `GET` | `/api/minesweeper` | Top scores per difficulty, sorted by time ascending |
+| `PUT` | `/api/minesweeper` | Submit a verified score `{ username, time, difficulty, token, secureToken }` |
+| `POST` | `/api/solitaire/token` | Issue a short-lived HMAC token |
+| `GET` | `/api/solitaire` | Win leaderboard, sorted by wins descending |
+| `PUT` | `/api/solitaire` | Submit a verified win `{ username, token, secureToken }` |
+| `POST` | `/api/sudoku/token` | Issue a short-lived HMAC token |
+| `GET` | `/api/sudoku` | Win leaderboard, sorted by wins descending |
+| `PUT` | `/api/sudoku` | Submit a verified win `{ username, token, secureToken }` |
+| `POST` | `/api/wordle/token` | Issue a short-lived HMAC token |
+| `GET` | `/api/wordle` | Win leaderboard, sorted by wins descending |
+| `PUT` | `/api/wordle` | Submit a verified win `{ username, guesses, token, secureToken }` |
+
+### Content
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/photos` | Stream Firestore album data as Server-Sent Events |
+| `GET` | `/api/museum` | Return all museum items grouped by category (cameras, consoles, computers) |
+| `GET` | `/api/weather` | Geocode a city and proxy current + 7-day forecast from Open-Meteo |
+
+### Admin (all require `Authorization: Bearer <token>`)
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/api/admin/auth` | Validate password; return a 1-hour HMAC session token |
+| `GET` | `/api/admin/[collection]` | List all documents in a collection |
+| `POST` | `/api/admin/[collection]` | Add a document |
+| `PATCH` | `/api/admin/[collection]/[docId]` | Update a document |
+| `DELETE` | `/api/admin/[collection]/[docId]` | Delete a document |
+| `POST` | `/api/admin/albums/scrape` | Scrape a Google Photos album URL and return metadata |
+
+Editable collections: `minesweeper`, `albums`, `solitaire`, `sudoku`, `museum_cameras`, `museum_computers`, `museum_consoles`.
+
+---
 
 ## Project Structure
 
 ```
 app/
-  applications/   # All window apps (Notepad, Minesweeper, Solitaire, Sudoku, Weather, CommandLine, …)
-  components/     # Desktop, ApplicationWindow, TaskBar, FileSystem, MinesweeperGrid, SolitaireCard, Vim
-  context/        # WindowManagerContext (useReducer), SettingsContext (CRT toggle)
-  hooks/          # useWindowManager, useIsMobile, useEmulatedFileSystem
-  icons/          # Windows 95 icon set
-  api/            # API routes (minesweeper, solitaire, sudoku, weather, photos, admin)
+  api/                    # Next.js API routes
+    admin/                #   CRUD + auth + album scraper
+    minesweeper/          #   Score token + leaderboard
+    solitaire/            #   Score token + leaderboard
+    sudoku/               #   Score token + leaderboard
+    wordle/               #   Score token + leaderboard
+    museum/               #   Museum data endpoint
+    photos/               #   SSE photo stream
+    weather/              #   Geocode + Open-Meteo proxy
+  applications/           # ~35 window app components
+  components/             # ApplicationWindow, TaskBar, Desktop,
+                          # minesweeper/, solitaire/, Vim.tsx
+  context/
+    WindowManagerContext.tsx   # Three fine-grained contexts
+    SettingsContext.tsx        # CRT toggle, persisted to localStorage
+  hooks/
+    useWindowManager.ts
+    useWindowState.ts
+    useWindowActions.ts
+    useEmulatedFileSystem.ts
+    useIsMobile.ts
+  helpers/
+    CommandHelpers.tsx    # CLI command implementations
+  icons/icons.ts
+  globals.scss            # All layout and component styles
+  crt.scss                # CRT scanline and flicker effects
+  layout.tsx
+  page.tsx
 lib/
-  firebase.ts     # Firebase client utilities
+  firebase.ts             # Firestore, Realtime DB, Storage exports
+  admin-auth.ts           # HMAC-SHA256 session token signing
+  museum.ts               # MuseumItem and MuseumResponse types
+patches/
+  react95+4.0.0.patch     # Replaces removed ReactDOM.findDOMNode call
 public/
-  fonts/          # MS Sans Serif
-  static/         # Images, icons, photos
+  fonts/                  # MS Sans Serif WOFF2, DSEG7
+  static/images/
+scripts/
+  scrape-albums.mjs       # Pre-build album metadata scraper
 ```
+
+---
 
 ## License
 
