@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button, MenuList, MenuListItem, Separator, Toolbar } from 'react95';
 import { useWindowManager } from '../hooks/useWindowManager';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { ANSWERS, VALID_GUESSES } from './wordle-words';
+import { ANSWERS, VALID_GUESSES } from '../helpers/wordle-words';
 
 interface WordleProps {
   windowId: string;
