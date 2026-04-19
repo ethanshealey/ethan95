@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import type { CompileRequest, CompileResponse } from '@/types/compile';
 import { EXPIRY_SECONDS } from './token/route';
 
-const JUDGE0_URL = 'https://compile.ethanshealey.com/submissions?base64_encoded=false&wait=true';
+const JUDGE0_URL = 'https://compile.ethanshealey.com/submissions?base64_encoded=true&wait=true';
 
 function verifyToken(token: string, languageId: number): boolean {
     const parts = token.split('.');
@@ -41,6 +41,10 @@ export async function POST(request: Request) {
         return Response.json({ error: 'Invalid token' }, { status: 403 });
     }
 
+    const stdinNormalized = (stdin || '').replaceAll(' ', '\n');
+    const encode = (s: string) => Buffer.from(s).toString('base64');
+    const decode = (s: string | null) => s ? Buffer.from(s, 'base64').toString('utf8') : null;
+
     const res = await fetch(JUDGE0_URL, {
         method: 'POST',
         headers: {
@@ -48,15 +52,15 @@ export async function POST(request: Request) {
             'X-Auth-Token': process.env.JUDGE0_API_TOKEN!,
         },
         body: JSON.stringify({
-            source_code: script,
+            source_code: encode(script),
             language_id: languageId,
-            stdin: stdin || '',
+            stdin: encode(stdinNormalized),
         }),
     });
 
     const data = await res.json();
 
-    const output = [data.stdout, data.compile_output, data.stderr]
+    const output = [decode(data.stdout), decode(data.compile_output), decode(data.stderr)]
         .filter(Boolean)
         .join('\n')
         .trimEnd();
