@@ -133,8 +133,61 @@ const Vim = ({ content, setContent, close }: VimProps) => {
         return { newLines: next, newCursor: { row: newRow, col: newCol }, text };
     };
 
+    const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        const text = e.clipboardData.getData('text').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        if (!text) return;
+
+        if (mode === 'command') {
+            setCmdInput(prev => prev + text.replace(/\n/g, ''));
+            return;
+        }
+
+        pushHistory();
+
+        let insertRow = cursor.row;
+        let insertCol = cursor.col;
+        let baseLines = [...lines];
+
+        if (mode === 'visual' && visualAnchor) {
+            const { newLines, newCursor } = deleteSelection(visualAnchor, cursor);
+            baseLines = newLines;
+            insertRow = newCursor.row;
+            insertCol = newCursor.col;
+            setMode('normal');
+            setVisualAnchor(null);
+        }
+
+        const insertLine = baseLines[insertRow] ?? '';
+        const pastedLines = text.split('\n');
+        let newLines: string[];
+        let newCursor: { row: number; col: number };
+
+        if (pastedLines.length === 1) {
+            newLines = [...baseLines];
+            newLines[insertRow] = insertLine.slice(0, insertCol) + pastedLines[0] + insertLine.slice(insertCol);
+            newCursor = { row: insertRow, col: insertCol + pastedLines[0].length };
+        } else {
+            const firstLine = insertLine.slice(0, insertCol) + pastedLines[0];
+            const lastLine = pastedLines[pastedLines.length - 1] + insertLine.slice(insertCol);
+            newLines = [...baseLines];
+            newLines.splice(insertRow, 1, firstLine, ...pastedLines.slice(1, -1), lastLine);
+            newCursor = {
+                row: insertRow + pastedLines.length - 1,
+                col: pastedLines[pastedLines.length - 1].length,
+            };
+        }
+
+        setLines(newLines);
+        setCursor(newCursor);
+        setModified(true);
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
         e.stopPropagation();
+
+        // Let the browser's paste event handle Ctrl/Cmd+V
+        if ((e.ctrlKey || e.metaKey) && e.key === 'v') return;
 
         const { row, col } = cursor;
         const line = lines[row] ?? '';
@@ -595,6 +648,7 @@ const Vim = ({ content, setContent, close }: VimProps) => {
             className="vim-container"
             tabIndex={0}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
         >
             <div className="vim-buffer">
                 {lines.map((line, i) => (
