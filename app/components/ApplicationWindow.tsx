@@ -13,7 +13,7 @@ interface ApplicationWindowProps {
 
 const MINIMIZE_EXCLUSION_LIST = ['Welcome'];
 const MAXIMIZE_EXCLUSION_LIST = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Solitaire', 'Solitaire Winner', 'Run', 'Calculator'];
-const RESIZE_EXCLUSION_LIST   = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Minesweeper Records', 'Solitaire', 'Solitaire Winner', 'Solitaire Leaderboard', 'Run', 'Sudoku', 'Sudoku Winner', 'Sudoku Leaderboard', 'Calculator'];
+const RESIZE_EXCLUSION_LIST   = ['Welcome', 'Minesweeper', 'Minesweeper Winner', 'Minesweeper Records', 'Solitaire', 'Solitaire Winner', 'Solitaire Leaderboard', 'Run', 'Sudoku', 'Sudoku Winner', 'Sudoku Leaderboard', 'Calculator', 'Wordle', 'Wordle Winner', 'Wordle Leaderboard'];
 
 const ApplicationWindow = memo(function ApplicationWindow({ windowData, app }: ApplicationWindowProps) {
   const { focusWindow, setPosition, setSize, toggleMinimize, toggleMaximize, closeWindow } = useWindowActions();
