@@ -77,15 +77,16 @@ const HELP_LINES: string[] = [
     'DIR / LS      Displays a list of files and subdirectories.',
     'ECHO          Displays messages, or turns command echoing on or off.',
     'EDIT / VI     Starts the file editor.',
+    'EXEC          Executes a provided file. Use `LANGS` to get a list of supported languages',
     'EXIT          Quits the current session.',
     'HELP          Provides help information for commands.',
     'MKDIR         Creates a directory.',
+    'RESET         Resets the Emulated Filesystem to its default state',
     'PROGRAMS      Lists available programs.',
     'RUN           Starts a program.',
     'TIME          Displays the current time.',
     'TOUCH         Creates an empty file.',
     'VER           Displays the system version.',
-    'RESET         Resets the Emulated Filesystem to its default state',
     '',
 ]
 
@@ -241,7 +242,7 @@ export function useEmulatedFileSystem() {
         if(!fileSystem) return []
 
         updateFile(fileSystem, path, location, setFileSystem, content)
-        
+
     }
 
     return [fileSystem, location, processCommand, processAutofill, processUpdateFile] as const;
