@@ -1,9 +1,9 @@
 'use client';
 
-import { MuseumItem, MuseumResponse } from '@/lib/museum';
+import { MuseumItem, MuseumResponse } from '@/types/museum';
 import React, { useEffect, useState } from 'react';
 import { Frame, Tab, TabBody, Tabs } from 'react95';
-import MuseumGroup from './MuseumGroup';
+import MuseumGroup from '../components/MuseumGroup';
 import { Icons } from '../icons/icons';
 
 interface MuseumProps {

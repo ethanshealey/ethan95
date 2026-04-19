@@ -1,6 +1,6 @@
 import { db } from '@/lib/firebase';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import type { MuseumItem, MuseumResponse } from '@/lib/museum';
+import type { MuseumItem, MuseumResponse } from '@/types/museum';
 
 export async function GET() {
   const [camerasSnap, computersSnap, consolesSnap] = await Promise.all([

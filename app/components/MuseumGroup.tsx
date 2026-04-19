@@ -1,4 +1,4 @@
-import { MuseumItem } from '@/lib/museum'
+import { MuseumItem } from '@/types/museum'
 import React from 'react'
 import { Frame, Separator } from 'react95'
 
@@ -20,7 +20,7 @@ const MuseumGroup = ({ title, description, data }: MuseumGroupType) => {
                 <Separator style={{ marginBottom: '10px' }} />
                 {
                     data.map((item: MuseumItem, idx: number) => (
-                        <div className='museum-item-wrapper'>
+                        <div key={`${item.name}:${item.year}`} className='museum-item-wrapper'>
                             <div className='museum-title'>
                                 <b>{ item.name }</b> | { item.year }
                             </div>

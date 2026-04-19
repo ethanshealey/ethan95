@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react';
-import { autofill, cat, changeDirectory, createDirectory, createFile, deleteFile, echo, editFile, listDirectory, updateFile } from '../helpers/CommandHelpers';
+import { autofill, cat, changeDirectory, createDirectory, createFile, deleteFile, echo, editFile, executeCode, listDirectory, updateFile } from '../helpers/CommandHelpers';
 import { APPLICATIONS } from '../applications';
 import peter from '../helpers/peter';
 
@@ -85,6 +85,7 @@ const HELP_LINES: string[] = [
     'TIME          Displays the current time.',
     'TOUCH         Creates an empty file.',
     'VER           Displays the system version.',
+    'RESET         Resets the Emulated Filesystem to its default state',
     '',
 ]
 
@@ -117,7 +118,7 @@ export function useEmulatedFileSystem() {
         return parts;
     }
 
-    const processCommand = (raw: string, windowId: string, openWindow: (id: string) => void, closeWindow: (id: string) => void): string[] | null => {
+    const processCommand = async (raw: string, windowId: string, openWindow: (id: string) => void, closeWindow: (id: string) => void): Promise<string[] | null> => {
         console.log('Processing command:', raw);
         console.log('data: ', { fileSystem, location, windowId });
 
@@ -213,6 +214,13 @@ export function useEmulatedFileSystem() {
                     return [`'${tokens[1]}' is not recognized as an internal or external command, operable program or batch file.`];
                 }
 
+            case 'RESET':
+                setFileSystem(_ => BASE_FILE_SYSTEM)
+                return ["Resetting emulated file system..."]
+
+            case 'EXEC':
+                return await executeCode(tokens, fileSystem, location)
+
             // Start Easter Eggs :)
             case 'FAMILY':
                 if(tokens[1]?.toUpperCase() === 'GUY') return peter();
@@ -233,14 +241,7 @@ export function useEmulatedFileSystem() {
         if(!fileSystem) return []
 
         updateFile(fileSystem, path, location, setFileSystem, content)
-
-        // const file = getObjectFromDirectory(fileSystem, location, path)
-        // file!.content = content
-
-        // const newFileSystem = { ...fileSystem }
-
-        // const pathParts = path.replaceAll('/', '\\').split('\\').filter(p => p.length())
-
+        
     }
 
     return [fileSystem, location, processCommand, processAutofill, processUpdateFile] as const;

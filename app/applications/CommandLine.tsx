@@ -29,6 +29,7 @@ export default function CommandLine({ windowId, focusWindow }: CommandLineProps)
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [cursorVisible, setCursorVisible] = useState(true);
     const [cursorPos, setCursorPos] = useState(0);
+    const [isExecuting, setIsExecuting] = useState(false)
     const [showEditor, setShowEditor] = useState<boolean>(false)
     const [editorContents, setEditorContents] = useState<string>()
     const [editorPath, setEditorPath] = useState<string>()
@@ -74,32 +75,33 @@ export default function CommandLine({ windowId, focusWindow }: CommandLineProps)
         return () => document.removeEventListener('keydown', handleGlobalKeyDown);
     }, [isWindowFocused, showEditor]);
 
-    const handleCommand = useCallback((raw: string): string[] | null => {
-        return processCommand(raw, windowId, openWindow, closeWindow)
+    const handleCommand = useCallback(async (raw: string): Promise<string[] | null> => {
+        return await processCommand(raw, windowId, openWindow, closeWindow)
     }, [processCommand, windowId, openWindow, closeWindow])
 
-    const submitCommand = useCallback((cmd: string) => {
-        const result = handleCommand(cmd);
+    const submitCommand = useCallback(async (cmd: string) => {
+        // Commit the command line and clear input immediately so the cursor
+        // drops to an empty prompt while the async request is in flight.
+        setLines(prev => [...prev, `C:\\${fileSystemLocation.join('\\')}> ${cmd}`]);
+        setCurrentInput('');
+        setCursorPos(0);
+        if (cmd.trim()) setCmdHistory(prev => [cmd, ...prev]);
+        setHistoryIndex(-1);
+
+        setIsExecuting(true);
+        const result = await handleCommand(cmd);
+        setIsExecuting(false);
 
         if (result === null) {
             setLines([]);
-        } else if(result.length > 0 && result[0] === OPEN_VIM_FLAG) {
-            result.shift()
-            setLines(prev => [...prev, `C:\\${fileSystemLocation.join('\\')}> ${cmd}`])
-            setEditorContents(_ => result.join('\n'))
-            setShowEditor(true)
-            setEditorPath(cmd.split(' ')[1])
+        } else if (result.length > 0 && result[0] === OPEN_VIM_FLAG) {
+            result.shift();
+            setEditorContents(_ => result.join('\n'));
+            setShowEditor(true);
+            setEditorPath(cmd.split(' ')[1]);
+        } else {
+            setLines(prev => [...prev, ...result]);
         }
-        else {
-            setLines(prev => [...prev, `C:\\${fileSystemLocation.join('\\')}> ${cmd}`, ...result]);
-        }
-
-        if (cmd.trim()) {
-            setCmdHistory(prev => [cmd, ...prev]);
-        }
-        setHistoryIndex(-1);
-        setCurrentInput('');
-        setCursorPos(0);
     }, [handleCommand, fileSystemLocation]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -107,6 +109,7 @@ export default function CommandLine({ windowId, focusWindow }: CommandLineProps)
 
         if (e.key === 'Enter') {
             e.preventDefault();
+            if (isExecuting) return;
             submitCommand(currentInput);
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
@@ -186,10 +189,12 @@ export default function CommandLine({ windowId, focusWindow }: CommandLineProps)
                             <div key={i} className="cli-line">{line || '\u00A0'}</div>
                         ))}
                         <div className="cli-line cli-input-line">
-                            <span className="cli-prompt">C:\{fileSystemLocation.join('\\')}&gt;&nbsp;</span>
-                            <span className="cli-text">{currentInput.slice(0, cursorPos)}</span>
-                            <span className={`cli-cursor${cursorVisible ? ' cli-cursor--on' : ''}`}>_</span>
-                            <span className="cli-text">{currentInput.slice(cursorPos)}</span>
+                            {!isExecuting && <>
+                                <span className="cli-prompt">C:\{fileSystemLocation.join('\\')}&gt;&nbsp;</span>
+                                <span className="cli-text">{currentInput.slice(0, cursorPos)}</span>
+                                <span className={`cli-cursor${cursorVisible ? ' cli-cursor--on' : ''}`}>_</span>
+                                <span className="cli-text">{currentInput.slice(cursorPos)}</span>
+                            </>}
                             <input
                                 ref={inputRef}
                                 className="cli-real-input"

@@ -1,5 +1,7 @@
 import { Dispatch, SetStateAction } from "react";
 import { EmulatedFileSystem, EmulatedFileSystemObject, OPEN_VIM_FLAG } from "../hooks/useEmulatedFileSystem";
+import { extensionToLanguage, JDoodleLanguage, listSupportedLanguages } from "./LanguageHelper";
+import { CompileRequest, CompileResponse } from "@/types/compile";
 
 export function autofill(currentInput: string, fileSystem: EmulatedFileSystem | null, location: string[]): string[] {
 
@@ -40,7 +42,8 @@ export function autofill(currentInput: string, fileSystem: EmulatedFileSystem | 
         case 'CAT':
         case 'VI':
         case 'VIM':
-        case 'EDIT': {
+        case 'EDIT':
+        case 'EXEC': {
             const segments = parts.length > 1
                 ? parts[1].replaceAll('/', '\\').split('\\')
                 : [];
@@ -88,7 +91,7 @@ export function autofill(currentInput: string, fileSystem: EmulatedFileSystem | 
 }
 
 /** Resolves path segments against a base location, handling ~, ., and .. */
-function resolvePath(pathParts: string[], location: string[]): string[] {
+export function resolvePath(pathParts: string[], location: string[]): string[] {
     const resolved = [...location];
     for (const part of pathParts) {
         if (part === '~') {
@@ -500,4 +503,68 @@ export function editFile(tokens: string[], fileSystem: EmulatedFileSystem | null
         const contents: string[] = obj.content ? obj.content.split('\n') : ['']
         return [OPEN_VIM_FLAG, ...contents]
     }
+}
+
+export async function executeCode(tokens: string[], fileSystem: EmulatedFileSystem | null, location: string[]): Promise<string[]> {
+
+    // Validate inputs
+    if(tokens.length < 2) {
+        return ["Please provide a file to execute. Usage: EXEC [file_name] -in (input)"]
+    }
+    else if(tokens[1].toUpperCase() === 'LANGS') {
+        return ["Supported Languages: ", ...listSupportedLanguages()]
+    }
+    else if(!tokens[1].includes('.')) {
+        return ["Please provide a valid filename with an extension. Usage: EXEC [file_name] -in (input)"]
+    }
+
+    // Get the language
+    const language: JDoodleLanguage | null = determineLanguageFromExtension(tokens[1])
+
+    if(!language) {
+        return ["Extension type " + tokens[1].split('.')[1] + " is not supported. Run `EXEC LANGS` to get a list of supported types."]
+    }
+
+    // Resolve path segments so "ethan95/test.py" navigates into the subdirectory
+    const parts = tokens[1].replace(/\\/g, '/').split('/')
+    const filename = parts[parts.length - 1]
+    const targetLocation = resolvePath(parts.slice(0, -1), location)
+
+    // Find the target file
+    const file: EmulatedFileSystemObject | null = getObjectFromDirectory(fileSystem!, targetLocation, filename)
+
+    if(!file) {
+        return ["No file found: " + tokens[1]]
+    }
+    console.log(file)
+
+    const inFlag = tokens.findIndex(t => t.toLowerCase() === '-in')
+    const stdin = inFlag !== -1 ? tokens.slice(inFlag + 1).join(' ') : ''
+
+    const jdoodleRequestBody: CompileRequest = {
+        script: file?.content ?? '',
+        stdin,
+        language: language.language,
+        versionIndex: language.versionIndex.toString()
+    }
+
+    const res = await fetch('/api/compile', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(jdoodleRequestBody)
+    })
+
+    const data: CompileResponse = await res.json()
+    
+    console.log(data)
+
+    return [ data.output ]
+        
+}
+
+const determineLanguageFromExtension = (filename: string): JDoodleLanguage | null => {
+    const ext = filename.split('.')[1]
+    return extensionToLanguage(ext)
 }
