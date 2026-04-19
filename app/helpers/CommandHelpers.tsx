@@ -519,7 +519,7 @@ export async function executeCode(tokens: string[], fileSystem: EmulatedFileSyst
     }
 
     // Get the language
-    const language: JDoodleLanguage | null = determineLanguageFromExtension(tokens[1])
+    const language: Judge0Language | null = determineLanguageFromExtension(tokens[1])
 
     if(!language) {
         return ["Extension type " + tokens[1].split('.')[1] + " is not supported. Run `EXEC LANGS` to get a list of supported types."]
