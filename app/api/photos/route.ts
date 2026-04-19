@@ -1,5 +1,4 @@
-import { db } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
 
 interface Album {
   url: string;
@@ -29,7 +28,7 @@ function buildStream(albums: Album[]): Response {
 }
 
 export async function GET() {
-  const snapshot = await getDocs(query(collection(db, 'albums'), orderBy('create_ts', 'asc')));
+  const snapshot = await adminDb.collection('albums').orderBy('create_ts', 'asc').get();
   const albums: Album[] = snapshot.docs.map((doc) => doc.data() as Album);
   return buildStream(albums);
 }

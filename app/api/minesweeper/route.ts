@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query, addDoc, Timestamp } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { EXPIRY_SECONDS } from './token/route';
 
 interface Score {
@@ -29,18 +29,18 @@ function verifyToken(token: string, time: number, difficulty: string): boolean {
 }
 
 export async function GET() {
-  const snapshot = await getDocs(query(collection(db, 'minesweeper'), orderBy('time', 'asc')));
+  const snapshot = await adminDb.collection('minesweeper').orderBy('time', 'asc').get();
   const allScores: Score[] = snapshot.docs.map((doc) => {
     const data = doc.data() as Score;
     return {
       username: data.username,
       time: data.time,
       difficulty: data.difficulty,
-      createdAt: Timestamp.fromDate(new Date(data.createdAt?.toDate().toISOString())) ?? '',
+      createdAt: data.createdAt,
     };
   });
 
-  const uniqueScores = new Map<String, Score>();
+  const uniqueScores = new Map<string, Score>();
   for (const score of allScores) {
     const key = `${score.username}:${score.difficulty}`;
     if (!uniqueScores.has(key) || score.time < uniqueScores.get(key)!.time) {
@@ -84,11 +84,11 @@ export async function PUT(request: Request) {
     return Response.json({ error: 'Invalid submission' }, { status: 400 });
   }
 
-  await addDoc(collection(db, 'minesweeper'), {
+  await adminDb.collection('minesweeper').add({
     username: username.trim().slice(0, 32),
     time,
     difficulty,
-    createdAt: Timestamp.now(),
+    createdAt: FieldValue.serverTimestamp(),
   });
 
   return Response.json({ success: true }, { status: 201 });

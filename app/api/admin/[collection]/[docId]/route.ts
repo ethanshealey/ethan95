@@ -1,5 +1,4 @@
-import { db } from '@/lib/firebase';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
 import { verifySessionToken } from '@/lib/admin-auth';
 
 const ALLOWED_COLLECTIONS = ['minesweeper', 'albums', 'solitaire', 'sudoku', 'museum_cameras', 'museum_computers', 'museum_consoles'] as const;
@@ -27,7 +26,7 @@ export async function PATCH(
   const updates = await request.json();
   delete updates.id;
 
-  await updateDoc(doc(db, col, docId), updates);
+  await adminDb.collection(col).doc(docId).update(updates);
   return Response.json({ success: true });
 }
 
@@ -45,6 +44,6 @@ export async function DELETE(
     return Response.json({ error: 'Not found' }, { status: 404 });
   }
 
-  await deleteDoc(doc(db, col, docId));
+  await adminDb.collection(col).doc(docId).delete();
   return Response.json({ success: true });
 }

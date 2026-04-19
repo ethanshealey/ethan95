@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query, where, addDoc, updateDoc, increment } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { EXPIRY_SECONDS } from './token/route';
 
 interface Score {
@@ -34,7 +34,7 @@ function verifySecureToken(token: string, secureToken: string): boolean {
 }
 
 export async function GET() {
-  const snapshot = await getDocs(query(collection(db, 'solitaire'), orderBy('wins', 'desc')));
+  const snapshot = await adminDb.collection('solitaire').orderBy('wins', 'desc').get();
   const scores: Score[] = snapshot.docs.map((doc) => {
     const data = doc.data() as Score;
     return { username: data.username, wins: data.wins };
@@ -59,12 +59,12 @@ export async function PUT(request: Request) {
   }
 
   const sanitized = username.trim().slice(0, 32);
-  const existing = await getDocs(query(collection(db, 'solitaire'), where('username', '==', sanitized)));
+  const existing = await adminDb.collection('solitaire').where('username', '==', sanitized).get();
 
   if (existing.empty) {
-    await addDoc(collection(db, 'solitaire'), { username: sanitized, wins: 1 });
+    await adminDb.collection('solitaire').add({ username: sanitized, wins: 1 });
   } else {
-    await updateDoc(existing.docs[0].ref, { wins: increment(1) });
+    await existing.docs[0].ref.update({ wins: FieldValue.increment(1) });
   }
 
   return Response.json({ success: true }, { status: 200 });

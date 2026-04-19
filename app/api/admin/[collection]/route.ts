@@ -1,5 +1,5 @@
-import { db } from '@/lib/firebase';
-import { collection as firestoreCollection, getDocs, addDoc, Timestamp } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 import { verifySessionToken } from '@/lib/admin-auth';
 
 const ALLOWED_COLLECTIONS = ['minesweeper', 'albums', 'solitaire', 'sudoku', 'museum_cameras', 'museum_computers', 'museum_consoles'] as const;
@@ -24,7 +24,7 @@ export async function GET(
     return Response.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const snapshot = await getDocs(firestoreCollection(db, col));
+  const snapshot = await adminDb.collection(col).get();
   const docs = snapshot.docs.map((docSnap) => {
     const data = docSnap.data();
     const serialized: Record<string, unknown> = { id: docSnap.id };
@@ -60,6 +60,6 @@ export async function POST(
       try { body.links = JSON.parse(body.links); } catch { /* leave as-is */ }
     }
   }
-  const docRef = await addDoc(firestoreCollection(db, col), body);
+  const docRef = await adminDb.collection(col).add(body);
   return Response.json({ id: docRef.id }, { status: 201 });
 }

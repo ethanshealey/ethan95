@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query, where, addDoc, updateDoc, increment } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { EXPIRY_SECONDS } from './token/route';
 
 interface Score {
@@ -37,7 +37,7 @@ function verifySecureToken(token: string, secureToken: string): boolean {
 }
 
 export async function GET() {
-  const snapshot = await getDocs(query(collection(db, 'sudoku'), orderBy('wins', 'desc')));
+  const snapshot = await adminDb.collection('sudoku').orderBy('wins', 'desc').get();
   const scores: Score[] = snapshot.docs.map((doc) => {
     const d = doc.data() as Score;
     return { username: d.username, difficulty: d.difficulty, wins: d.wins, bestTime: d.bestTime, lastWin: d.lastWin };
@@ -70,11 +70,11 @@ export async function PUT(request: Request) {
   const sanitized = username.trim().slice(0, 32);
   const now = Date.now();
 
-  const userDocs = await getDocs(query(collection(db, 'sudoku'), where('username', '==', sanitized)));
+  const userDocs = await adminDb.collection('sudoku').where('username', '==', sanitized).get();
   const existing = userDocs.docs.find((d) => d.data().difficulty === difficulty);
 
   if (!existing) {
-    await addDoc(collection(db, 'sudoku'), {
+    await adminDb.collection('sudoku').add({
       username: sanitized,
       difficulty,
       wins: 1,
@@ -83,8 +83,8 @@ export async function PUT(request: Request) {
     });
   } else {
     const current = existing.data() as Score;
-    await updateDoc(existing.ref, {
-      wins: increment(1),
+    await existing.ref.update({
+      wins: FieldValue.increment(1),
       bestTime: time < current.bestTime ? time : current.bestTime,
       lastWin: now,
     });
