@@ -1,153 +1,116 @@
-/** Maps a file extension to a JDoodle compiler language code and version index. */
-export interface JDoodleLanguage {
-  language: string
-  versionIndex: number
+/** Maps a file extension to a Judge0 language ID. */
+export interface Judge0Language {
+  languageId: number;
+  name: string;
 }
 
 /**
- * Maps common file extensions to their JDoodle language code and latest version index.
- * Source: https://www.jdoodle.com/docs/compiler-apis/supported-languages-versions/
+ * Maps common file extensions to their Judge0 CE language IDs.
+ * Source: https://github.com/judge0/judge0/blob/master/docs/api/languages.md
  */
-const EXTENSION_MAP: Record<string, JDoodleLanguage> = {
+const EXTENSION_MAP: Record<string, Judge0Language> = {
   // Systems / C family
-  c:      { language: 'c',      versionIndex: 7 },
-  h:      { language: 'c',      versionIndex: 7 },
-  cpp:    { language: 'cpp',    versionIndex: 7 },
-  cc:     { language: 'cpp',    versionIndex: 7 },
-  cxx:    { language: 'cpp',    versionIndex: 7 },
-  hpp:    { language: 'cpp',    versionIndex: 7 },
-  hxx:    { language: 'cpp',    versionIndex: 7 },
-  cs:     { language: 'csharp', versionIndex: 6 },
-  rs:     { language: 'rust',   versionIndex: 6 },
-  zig:    { language: 'zig',    versionIndex: 0 },
-  d:      { language: 'd',      versionIndex: 4 },
-  v:      { language: 'vlang',  versionIndex: 0 },
-  odin:   { language: 'odin',   versionIndex: 0 },
-  vala:   { language: 'vala',   versionIndex: 0 },
+  c:      { languageId: 50, name: 'C (GCC 9.2.0)' },
+  h:      { languageId: 50, name: 'C (GCC 9.2.0)' },
+  cpp:    { languageId: 54, name: 'C++ (GCC 9.2.0)' },
+  cc:     { languageId: 54, name: 'C++ (GCC 9.2.0)' },
+  cxx:    { languageId: 54, name: 'C++ (GCC 9.2.0)' },
+  hpp:    { languageId: 54, name: 'C++ (GCC 9.2.0)' },
+  hxx:    { languageId: 54, name: 'C++ (GCC 9.2.0)' },
+  cs:     { languageId: 51, name: 'C# (Mono 6.6.0)' },
+  rs:     { languageId: 73, name: 'Rust (1.40.0)' },
+  d:      { languageId: 56, name: 'D (DMD 2.089.1)' },
 
   // JVM
-  java:   { language: 'java',   versionIndex: 6 },
-  kt:     { language: 'kotlin', versionIndex: 5 },
-  kts:    { language: 'kotlin', versionIndex: 5 },
-  scala:  { language: 'scala',  versionIndex: 6 },
-  groovy: { language: 'groovy', versionIndex: 6 },
-  clj:    { language: 'clojure', versionIndex: 5 },
+  java:   { languageId: 62, name: 'Java (OpenJDK 13.0.1)' },
+  kt:     { languageId: 78, name: 'Kotlin (1.3.70)' },
+  kts:    { languageId: 78, name: 'Kotlin (1.3.70)' },
+  scala:  { languageId: 81, name: 'Scala (2.13.2)' },
+  groovy: { languageId: 68, name: 'Groovy (3.0.3)' },
 
   // Python
-  py:     { language: 'python3', versionIndex: 6 },
-  pyw:    { language: 'python3', versionIndex: 6 },
+  py:     { languageId: 71, name: 'Python (3.8.1)' },
+  pyw:    { languageId: 71, name: 'Python (3.8.1)' },
 
   // JavaScript / TypeScript
-  js:     { language: 'nodejs',      versionIndex: 7 },
-  mjs:    { language: 'nodejs',      versionIndex: 7 },
-  cjs:    { language: 'nodejs',      versionIndex: 7 },
-  ts:     { language: 'typescript',  versionIndex: 1 },
-  coffee: { language: 'coffeescript', versionIndex: 5 },
+  js:     { languageId: 63, name: 'JavaScript (Node.js 12.14.0)' },
+  mjs:    { languageId: 63, name: 'JavaScript (Node.js 12.14.0)' },
+  cjs:    { languageId: 63, name: 'JavaScript (Node.js 12.14.0)' },
+  ts:     { languageId: 74, name: 'TypeScript (3.7.4)' },
 
   // Go
-  go:     { language: 'go', versionIndex: 6 },
+  go:     { languageId: 60, name: 'Go (1.13.5)' },
 
-  // Ruby / Crystal
-  rb:     { language: 'ruby',    versionIndex: 6 },
-  cr:     { language: 'crystal', versionIndex: 1 },
+  // Ruby
+  rb:     { languageId: 72, name: 'Ruby (2.7.0)' },
 
   // PHP
-  php:    { language: 'php', versionIndex: 6 },
+  php:    { languageId: 68, name: 'PHP (7.4.1)' },
 
   // Swift / Objective-C
-  swift:  { language: 'swift', versionIndex: 6 },
-  m:      { language: 'objc',  versionIndex: 6 },
-  mm:     { language: 'objc',  versionIndex: 6 },
+  swift:  { languageId: 83, name: 'Swift (5.2.3)' },
+  m:      { languageId: 79, name: 'Objective-C (Clang 7.0.1)' },
+  mm:     { languageId: 79, name: 'Objective-C (Clang 7.0.1)' },
 
   // Functional
-  hs:     { language: 'haskell', versionIndex: 6 },
-  lhs:    { language: 'haskell', versionIndex: 6 },
-  ml:     { language: 'ocaml',   versionIndex: 4 },
-  mli:    { language: 'ocaml',   versionIndex: 4 },
-  ex:     { language: 'elixir',  versionIndex: 6 },
-  exs:    { language: 'elixir',  versionIndex: 6 },
-  erl:    { language: 'erlang',  versionIndex: 3 },
-  fs:     { language: 'fsharp',  versionIndex: 3 },
-  fsx:    { language: 'fsharp',  versionIndex: 3 },
-  jl:     { language: 'julia',   versionIndex: 1 },
-  rkt:    { language: 'racket',  versionIndex: 4 },
-  scm:    { language: 'scheme',  versionIndex: 5 },
-  lisp:   { language: 'clisp',   versionIndex: 11 },
-  cl:     { language: 'clisp',   versionIndex: 11 },
+  hs:     { languageId: 61, name: 'Haskell (GHC 8.8.1)' },
+  lhs:    { languageId: 61, name: 'Haskell (GHC 8.8.1)' },
+  ml:     { languageId: 65, name: 'OCaml (4.09.0)' },
+  mli:    { languageId: 65, name: 'OCaml (4.09.0)' },
+  ex:     { languageId: 57, name: 'Elixir (1.9.4)' },
+  exs:    { languageId: 57, name: 'Elixir (1.9.4)' },
+  erl:    { languageId: 58, name: 'Erlang (OTP 22.2)' },
+  lisp:   { languageId: 55, name: 'Common Lisp (SBCL 2.0.0)' },
+  cl:     { languageId: 55, name: 'Common Lisp (SBCL 2.0.0)' },
 
   // Scripting / Shell
-  sh:     { language: 'bash', versionIndex: 5 },
-  bash:   { language: 'bash', versionIndex: 5 },
-  pl:     { language: 'perl', versionIndex: 6 },
-  pm:     { language: 'perl', versionIndex: 6 },
-  lua:    { language: 'lua',  versionIndex: 5 },
-  tcl:    { language: 'tcl',  versionIndex: 6 },
-  awk:    { language: 'awk',  versionIndex: 1 },
+  sh:     { languageId: 46, name: 'Bash (5.0.0)' },
+  bash:   { languageId: 46, name: 'Bash (5.0.0)' },
+  pl:     { languageId: 85, name: 'Perl (5.28.1)' },
+  pm:     { languageId: 85, name: 'Perl (5.28.1)' },
+  lua:    { languageId: 64, name: 'Lua (5.3.5)' },
 
   // .NET
-  vb:     { language: 'vbn', versionIndex: 6 },
-
-  // Dart
-  dart:   { language: 'dart', versionIndex: 6 },
+  vb:     { languageId: 84, name: 'VB.Net (vbnc 0.0.0.5943)' },
 
   // Systems / HPC
-  r:      { language: 'r',       versionIndex: 6 },
-  R:      { language: 'r',       versionIndex: 6 },
-  f:      { language: 'fortran', versionIndex: 6 },
-  f90:    { language: 'fortran', versionIndex: 6 },
-  f95:    { language: 'fortran', versionIndex: 6 },
-  for:    { language: 'fortran', versionIndex: 6 },
+  r:      { languageId: 80, name: 'R (4.0.0)' },
+  R:      { languageId: 80, name: 'R (4.0.0)' },
+  f:      { languageId: 59, name: 'Fortran (GFortran 9.2.0)' },
+  f90:    { languageId: 59, name: 'Fortran (GFortran 9.2.0)' },
+  f95:    { languageId: 59, name: 'Fortran (GFortran 9.2.0)' },
+  for:    { languageId: 59, name: 'Fortran (GFortran 9.2.0)' },
 
   // Assembly
-  asm:    { language: 'nasm',   versionIndex: 6 },
-  s:      { language: 'gccasm', versionIndex: 5 },
-  S:      { language: 'gccasm', versionIndex: 5 },
+  asm:    { languageId: 45, name: 'Assembly (NASM 2.14.02)' },
+  s:      { languageId: 45, name: 'Assembly (NASM 2.14.02)' },
+  S:      { languageId: 45, name: 'Assembly (NASM 2.14.02)' },
 
   // Database
-  sql:    { language: 'sql', versionIndex: 5 },
+  sql:    { languageId: 82, name: 'SQL (SQLite 3.27.2)' },
 
-  // Nim / Prolog / Pascal
-  nim:    { language: 'nim',    versionIndex: 5 },
-  pl6:    { language: 'prolog', versionIndex: 3 },
-  pro:    { language: 'prolog', versionIndex: 3 },
-  pas:    { language: 'pascal', versionIndex: 3 },
-  pp:     { language: 'pascal', versionIndex: 3 },
-
-  // Hardware
-  sv:     { language: 'verilog', versionIndex: 5 },
-  svh:    { language: 'verilog', versionIndex: 5 },
-
-  // Other notable
-  sol:    { language: 'solidity',    versionIndex: 0 },
-  nim2:   { language: 'nim',         versionIndex: 5 },
-  hx:     { language: 'haxe',        versionIndex: 2 },
-  bf:     { language: 'brainfuck',   versionIndex: 0 },
-  factor: { language: 'factor',      versionIndex: 4 },
-  ada:    { language: 'ada',         versionIndex: 6 },
-  adb:    { language: 'ada',         versionIndex: 6 },
-  ads:    { language: 'ada',         versionIndex: 6 },
-  cob:    { language: 'cobol',       versionIndex: 4 },
-  cbl:    { language: 'cobol',       versionIndex: 4 },
-  bc:     { language: 'bc',          versionIndex: 1 },
-  raku:   { language: 'raku',        versionIndex: 1 },
-  p6:     { language: 'raku',        versionIndex: 1 },
+  // Prolog / Pascal
+  pl6:    { languageId: 69, name: 'Prolog (GNU Prolog 1.4.5)' },
+  pro:    { languageId: 69, name: 'Prolog (GNU Prolog 1.4.5)' },
+  pas:    { languageId: 67, name: 'Pascal (FPC 3.0.4)' },
+  pp:     { languageId: 67, name: 'Pascal (FPC 3.0.4)' },
 }
 
 /**
- * Returns the JDoodle language code and version index for the given file extension.
+ * Returns the Judge0 language entry for the given file extension.
  * The extension may include or omit a leading dot (e.g. `"py"` or `".py"`).
  * Returns `null` if the extension is not recognized.
  */
-export function extensionToLanguage(ext: string): JDoodleLanguage | null {
+export function extensionToLanguage(ext: string): Judge0Language | null {
   const normalized = ext.replace(/^\./, '').toLowerCase()
   return EXTENSION_MAP[normalized] ?? null
 }
 
 /**
  * Extracts the file extension from a filename or path and returns the
- * corresponding JDoodle language entry, or `null` if unrecognized.
+ * corresponding Judge0 language entry, or `null` if unrecognized.
  */
-export function filenameToLanguage(filename: string): JDoodleLanguage | null {
+export function filenameToLanguage(filename: string): Judge0Language | null {
   const parts = filename.split('.')
   if (parts.length < 2) return null
   return extensionToLanguage(parts[parts.length - 1])
@@ -158,22 +121,21 @@ export function filenameToLanguage(filename: string): JDoodleLanguage | null {
  * recognized extensions, suitable for printing in the CLI.
  */
 export function listSupportedLanguages(): string[] {
-  // Group extensions by language code, preserving insertion order for primary ext
-  const grouped = new Map<string, { versionIndex: number; exts: string[] }>()
-  for (const [ext, { language, versionIndex }] of Object.entries(EXTENSION_MAP)) {
-    const entry = grouped.get(language)
+  const grouped = new Map<number, { name: string; exts: string[] }>()
+  for (const [ext, { languageId, name }] of Object.entries(EXTENSION_MAP)) {
+    const entry = grouped.get(languageId)
     if (entry) {
       if (!entry.exts.includes(ext)) entry.exts.push(ext)
     } else {
-      grouped.set(language, { versionIndex, exts: [ext] })
+      grouped.set(languageId, { name, exts: [ext] })
     }
   }
 
   const EXT_W = 24
-  const LANG_W = 16
+  const LANG_W = 32
 
   const pad = (s: string, w: number) => s.length >= w ? s : s + ' '.repeat(w - s.length)
-  const divider = ' ' + '-'.repeat(EXT_W) + '  ' + '-'.repeat(LANG_W) + '  '
+  const divider = ' ' + '-'.repeat(EXT_W) + '  ' + '-'.repeat(LANG_W)
 
   const lines: string[] = [
     '',
@@ -181,9 +143,9 @@ export function listSupportedLanguages(): string[] {
     divider,
   ]
 
-  for (const [language, { versionIndex, exts }] of grouped) {
+  for (const [, { name, exts }] of grouped) {
     const extStr = exts.map(e => `.${e}`).join(' ')
-    lines.push(` ${pad(extStr, EXT_W)}  ${pad(language, LANG_W)}`)
+    lines.push(` ${pad(extStr, EXT_W)}  ${pad(name, LANG_W)}`)
   }
 
   lines.push('')

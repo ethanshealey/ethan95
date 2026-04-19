@@ -1,6 +1,6 @@
 import { Dispatch, SetStateAction } from "react";
 import { EmulatedFileSystem, EmulatedFileSystemObject, OPEN_VIM_FLAG } from "../hooks/useEmulatedFileSystem";
-import { extensionToLanguage, JDoodleLanguage, listSupportedLanguages } from "./LanguageHelper";
+import { extensionToLanguage, Judge0Language, listSupportedLanguages } from "./LanguageHelper";
 import { CompileRequest, CompileResponse } from "@/types/compile";
 
 export function autofill(currentInput: string, fileSystem: EmulatedFileSystem | null, location: string[]): string[] {
@@ -544,7 +544,7 @@ export async function executeCode(tokens: string[], fileSystem: EmulatedFileSyst
     const tokenRes = await fetch('/api/compile/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: language.language, versionIndex: language.versionIndex }),
+        body: JSON.stringify({ languageId: language.languageId }),
     })
 
     if (!tokenRes.ok) return ['Failed to authenticate compile request.']
@@ -558,11 +558,10 @@ export async function executeCode(tokens: string[], fileSystem: EmulatedFileSyst
     const sig = await crypto.subtle.sign('HMAC', cryptoKey, msgData)
     const secureToken = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
-    const jdoodleRequestBody: CompileRequest = {
+    const requestBody: CompileRequest = {
         script: file?.content ?? '',
         stdin,
-        language: language.language,
-        versionIndex: language.versionIndex,
+        languageId: language.languageId,
         token,
         secureToken,
     }
@@ -570,7 +569,7 @@ export async function executeCode(tokens: string[], fileSystem: EmulatedFileSyst
     const res = await fetch('/api/compile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jdoodleRequestBody),
+        body: JSON.stringify(requestBody),
     })
 
     const data: CompileResponse = await res.json()
@@ -581,7 +580,7 @@ export async function executeCode(tokens: string[], fileSystem: EmulatedFileSyst
         
 }
 
-const determineLanguageFromExtension = (filename: string): JDoodleLanguage | null => {
+const determineLanguageFromExtension = (filename: string): Judge0Language | null => {
     const ext = filename.split('.')[1]
     return extensionToLanguage(ext)
 }

@@ -50,11 +50,11 @@ A Windows 95-inspired personal portfolio built with Next.js. It simulates a comp
 
 | App | Description |
 |-----|-------------|
-| **Command Line** | ETHAN-DOS 6.22 emulator with a fully emulated filesystem persisted to `localStorage`. Supports command history (↑ / ↓) and double-Tab autocomplete. Includes an embedded Vim editor (`vim` / `vi` / `edit`) with Normal, Insert, Visual, and Command modes. Source files can be executed directly from the terminal via the JDoodle compiler API |
+| **Command Line** | ETHAN-DOS 6.22 emulator with a fully emulated filesystem persisted to `localStorage`. Supports command history (↑ / ↓) and double-Tab autocomplete. Includes an embedded Vim editor (`vim` / `vi` / `edit`) with Normal, Insert, Visual, and Command modes. Source files can be executed directly from the terminal via a self-hosted Judge0 instance |
 
 **Supported commands:** `cd`, `ls` / `dir`, `mkdir`, `cat`, `touch`, `echo`, `vim` / `vi` / `edit`, `rm` / `del`, `cls` / `clear`, `date`, `time`, `help`, `ver`, `programs`, `run <app-id>`, `exec <file> [-in <stdin>]`, `exit`
 
-**Code execution:** Write a source file with `vim` or `touch`, then run it with `exec <path/to/file>`. Optional `-in` flag passes stdin (e.g. `exec hello.py -in world`). Run `exec langs` to list all supported languages and file extensions. Powered by the [JDoodle Compiler API](https://www.jdoodle.com/compiler-api/) — supports 110+ languages including Python, JavaScript, C, C++, Java, Rust, Go, and more.
+**Code execution:** Write a source file with `vim` or `touch`, then run it with `exec <path/to/file>`. Optional `-in` flag passes stdin (e.g. `exec hello.py -in world`). Run `exec langs` to list all supported languages and file extensions. Powered by a self-hosted [Judge0](https://github.com/judge0/judge0) instance — supports 40+ languages including Python, JavaScript, C, C++, Java, Rust, Go, and more.
 
 ---
 
@@ -131,9 +131,8 @@ NEXT_PUBLIC_SCORE_SECRET=
 # HMAC key for admin session tokens
 ADMIN_SECRET=
 
-# JDoodle Compiler API (https://www.jdoodle.com/compiler-api/)
-JDOODLE_CLIENT_ID=
-JDOODLE_CLIENT_SECRET=
+# Auth token for self-hosted Judge0 instance (compile.ethanshealey.com)
+JUDGE0_API_TOKEN=
 ```
 
 Firebase services required: **Firestore**, **Realtime Database**, **Storage**.

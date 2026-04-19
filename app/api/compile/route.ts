@@ -2,16 +2,16 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import type { CompileRequest, CompileResponse } from '@/types/compile';
 import { EXPIRY_SECONDS } from './token/route';
 
-const JDOODLE_URL = 'https://api.jdoodle.com/v1/execute'
+const JUDGE0_URL = 'https://compile.ethanshealey.com/submissions?base64_encoded=false&wait=true';
 
-function verifyToken(token: string, language: string, versionIndex: number): boolean {
+function verifyToken(token: string, languageId: number): boolean {
     const parts = token.split('.');
     if (parts.length !== 2) return false;
     const [hmac, tsStr] = parts;
     const timestamp = parseInt(tsStr, 10);
     if (isNaN(timestamp)) return false;
     if (Math.floor(Date.now() / 1000) - timestamp > EXPIRY_SECONDS) return false;
-    const payload = `${language}:${versionIndex}:${timestamp}`;
+    const payload = `${languageId}:${timestamp}`;
     const expected = createHmac('sha256', process.env.SCORE_SECRET!).update(payload).digest('base64url');
     try {
         return timingSafeEqual(Buffer.from(hmac), Buffer.from(expected));
@@ -31,29 +31,44 @@ function verifySecureToken(token: string, secureToken: string): boolean {
 
 export async function POST(request: Request) {
     const body: CompileRequest = await request.json();
-    const { script, stdin, language, versionIndex, token, secureToken } = body;
+    const { script, stdin, languageId, token, secureToken } = body;
 
     if (
         !token || !secureToken ||
-        !verifyToken(token, language, versionIndex) ||
+        !verifyToken(token, languageId) ||
         !verifySecureToken(token, secureToken)
     ) {
         return Response.json({ error: 'Invalid token' }, { status: 403 });
     }
 
-    const res = await fetch(JDOODLE_URL, {
+    const res = await fetch(JUDGE0_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Auth-Token': process.env.JUDGE0_API_TOKEN!,
+        },
         body: JSON.stringify({
-            clientId: process.env.JDOODLE_CLIENT_ID,
-            clientSecret: process.env.JDOODLE_CLIENT_SECRET,
-            script,
-            stdin,
-            language,
-            versionIndex,
-        })
+            source_code: script,
+            language_id: languageId,
+            stdin: stdin || '',
+        }),
     });
 
-    const data: CompileResponse = await res.json();
-    return Response.json(data);
+    const data = await res.json();
+
+    const output = [data.stdout, data.compile_output, data.stderr]
+        .filter(Boolean)
+        .join('\n')
+        .trimEnd();
+
+    const response: CompileResponse = {
+        output,
+        status: data.status?.description ?? 'Unknown',
+        time: data.time ?? null,
+        memory: data.memory ?? null,
+    };
+
+    console.log(response)
+
+    return Response.json(response);
 }
