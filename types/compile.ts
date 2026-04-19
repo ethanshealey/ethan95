@@ -3,7 +3,9 @@ export interface CompileRequest {
     script: string,
     stdin: string,
     language: string,
-    versionIndex: string
+    versionIndex: number,
+    token: string,
+    secureToken: string,
 }
 
 export interface CompileResponse {

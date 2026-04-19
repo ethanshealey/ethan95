@@ -5,7 +5,7 @@ import { Button, Frame, MenuList, MenuListItem, Separator, Toolbar } from 'react
 import { useWindowManager } from '../hooks/useWindowManager';
 import { useIsMobile } from '../hooks/useIsMobile';
 import {
-  Card, GameState, Source, HintResult,
+  Card, GameState, Source, HintResult, Suit,
   SUIT_ORDER, SUIT_SYMBOLS, FACE_UP_STEP, BOARD_W, BOARD_H, PADDING, TABLEAU_Y, CARD_W, CARD_H,
   dealGame, canMoveToTableau, canMoveToFoundation,
   getFoundationIndex, applyMove, colX, tableauCardY, findHint, allCardsFlipped,
@@ -14,6 +14,10 @@ import { CardFace, CardBack, EmptyPile } from '../components/solitaire/Solitaire
 import { set } from 'firebase/database';
 
 const DRAG_THRESHOLD = 8; // px of movement before drag activates
+const GRAVITY = 0.4;
+const BOUNCE = 0.8;
+
+type AnimCard = { suit: Suit; rank: number; x: number; y: number; vx: number; vy: number };
 
 type DragState = {
   cards: Card[];
@@ -81,6 +85,13 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
   const [hint, setHint] = useState<HintResult | null>(null);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [showAnim, setShowAnim] = useState(false);
+  const [, setRenderTick] = useState(0);
+  const animCardsRef = useRef<AnimCard[]>([]);
+  const animRafRef = useRef<number | null>(null);
+  const animLaunchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const animWinnerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Responsive scaling
   useEffect(() => {
     if (!containerRef.current) return;
@@ -100,6 +111,14 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     return () => obs.disconnect();
   }, []);
 
+  const stopAnimation = useCallback(() => {
+    if (animRafRef.current) { cancelAnimationFrame(animRafRef.current); animRafRef.current = null; }
+    if (animLaunchRef.current) { clearTimeout(animLaunchRef.current); animLaunchRef.current = null; }
+    if (animWinnerRef.current) { clearTimeout(animWinnerRef.current); animWinnerRef.current = null; }
+    animCardsRef.current = [];
+    setShowAnim(false);
+  }, []);
+
   const clearHint = useCallback(() => {
     if (hintTimerRef.current) { clearTimeout(hintTimerRef.current); hintTimerRef.current = null; }
     setHint(null);
@@ -117,31 +136,34 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [showMenu]);
 
-  // Initialise the solver worker once; terminate on unmount
-  useEffect(() => {
+  const makeWorker = useCallback(() => {
     const w = new Worker(
       new URL('../components/solitaire/utils/solitaireSolver.worker.ts', import.meta.url),
     );
     w.onmessage = (e: MessageEvent<{ solvable: boolean; seq: number }>) => {
-      if (e.data.seq === solveSeqRef.current) {
-        console.log('Solver found no routes:', e.data);
-        setStuck(!e.data.solvable);
-      }
+      if (e.data.seq === solveSeqRef.current) setStuck(!e.data.solvable);
     };
     w.onerror = (e) => console.error('Solver worker error:', e.message, e);
-    workerRef.current = w;
-    return () => w.terminate();
+    return w;
   }, []);
 
-  // Re-run the solver only when the tableau changes; discard stale results via seq
+  useEffect(() => {
+    workerRef.current = makeWorker();
+    return () => workerRef.current?.terminate();
+  }, [makeWorker]);
+
+  // Re-run the solver only when the tableau changes. Terminate the current worker
+  // first so any in-progress or queued isSolvable call is cancelled immediately.
   useEffect(() => {
     if (won) { setStuck(false); return; }
     if (game.tableau === prevTableauRef.current) return;
     prevTableauRef.current = game.tableau;
     const seq = ++solveSeqRef.current;
     setStuck(false);
-    workerRef.current?.postMessage({ game, seq });
-  }, [game, won]);
+    workerRef.current?.terminate();
+    workerRef.current = makeWorker();
+    workerRef.current.postMessage({ game, seq });
+  }, [game, won, makeWorker]);
 
   /** Resolves the drop target and applies the move when the user releases a drag. Stored in a ref so document handlers always see the latest game state. */
   const dropCardsRef = useRef<(d: NonNullable<DragState>, bx: number, by: number) => void>(() => {});
@@ -339,11 +361,54 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
   }, []);
 
   useEffect(() => {
-    if (!won) return;
-    (async () => {
-      openWindow('solitaire-winner', { props: { won: true } });
-    })();
-  }, [won]);
+    if (!won) { stopAnimation(); return; }
+
+    setShowAnim(true);
+    animCardsRef.current = [];
+    let launched = 0;
+
+    const launchCard = () => {
+      const fi = launched % 4;
+      animCardsRef.current = [...animCardsRef.current, {
+        suit: SUIT_ORDER[fi],
+        rank: Math.floor(launched / 4) + 1,
+        x: colX(3 + fi),
+        y: PADDING,
+        vx: (Math.random() - 0.5) * 14,
+        vy: -(Math.random() * 6 + 8),
+      }];
+      launched++;
+      if (launched < 52) animLaunchRef.current = setTimeout(launchCard, 60);
+    };
+    launchCard();
+
+    const tick = () => {
+      animCardsRef.current = animCardsRef.current.map(c => {
+        let { x, y, vx, vy } = c;
+        vy += GRAVITY;
+        x += vx;
+        y += vy;
+        if (x < 0) { x = 0; vx = Math.abs(vx) * BOUNCE; }
+        if (x + CARD_W > BOARD_W) { x = BOARD_W - CARD_W; vx = -Math.abs(vx) * BOUNCE; }
+        if (y + CARD_H > BOARD_H) { y = BOARD_H - CARD_H; vy = -Math.abs(vy) * BOUNCE; }
+        return { ...c, x, y, vx, vy };
+      });
+      setRenderTick(t => t + 1);
+      animRafRef.current = requestAnimationFrame(tick);
+    };
+    animRafRef.current = requestAnimationFrame(tick);
+
+    if (!isMobileRef.current) {
+      animWinnerRef.current = setTimeout(() => {
+        stopAnimation();
+        openWindow('solitaire-winner', { props: { won: true } });
+      }, 4000);
+    }
+
+    setGameState({ game: dealGame(), history: [] })
+
+    return () => stopAnimation();
+  }, [won, stopAnimation]);
 
   const isDraggedCard = (source: Source, cardIndex: number): boolean => {
     const d = drag;
@@ -587,6 +652,28 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
           {renderFoundations()}
           {game.tableau.map((col, ci) => renderTableauColumn(col, ci))}
           {drag && renderDragLayer(drag)}
+          {showAnim && (
+            <>
+              <div
+                style={{ position: 'absolute', inset: 0, zIndex: 1998, cursor: 'pointer' }}
+                onClick={() => { stopAnimation(); openWindow('solitaire-winner', { props: { won: true } }); }}
+              />
+              {animCardsRef.current.map((ac, i) => (
+                <CardFace
+                  key={`anim-${i}`}
+                  card={{ suit: ac.suit, rank: ac.rank, faceUp: true }}
+                  style={{
+                    position: 'absolute',
+                    left: ac.x,
+                    top: ac.y,
+                    zIndex: 900 + i,
+                    pointerEvents: 'none',
+                    boxShadow: '2px 4px 8px rgba(0,0,0,0.4)',
+                  }}
+                />
+              ))}
+            </>
+          )}
 
         </div>
       </div>

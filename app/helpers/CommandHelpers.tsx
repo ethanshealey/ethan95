@@ -541,19 +541,36 @@ export async function executeCode(tokens: string[], fileSystem: EmulatedFileSyst
     const inFlag = tokens.findIndex(t => t.toLowerCase() === '-in')
     const stdin = inFlag !== -1 ? tokens.slice(inFlag + 1).join(' ') : ''
 
+    const tokenRes = await fetch('/api/compile/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: language.language, versionIndex: language.versionIndex }),
+    })
+
+    if (!tokenRes.ok) return ['Failed to authenticate compile request.']
+
+    const { token } = await tokenRes.json()
+
+    const encoder = new TextEncoder()
+    const keyData = encoder.encode(process.env.NEXT_PUBLIC_SCORE_SECRET!)
+    const msgData = encoder.encode(token)
+    const cryptoKey = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+    const sig = await crypto.subtle.sign('HMAC', cryptoKey, msgData)
+    const secureToken = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
     const jdoodleRequestBody: CompileRequest = {
         script: file?.content ?? '',
         stdin,
         language: language.language,
-        versionIndex: language.versionIndex.toString()
+        versionIndex: language.versionIndex,
+        token,
+        secureToken,
     }
 
     const res = await fetch('/api/compile', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(jdoodleRequestBody)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jdoodleRequestBody),
     })
 
     const data: CompileResponse = await res.json()

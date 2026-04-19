@@ -194,7 +194,8 @@ function generateMoves(game: GameState): GameState[] {
   const wasteToTab:   GameState[] = [];  // third   – waste top to tableau
   const tabToTab:     GameState[] = [];  // fourth  – tableau shuffle (no expose)
   const stockMoves:   GameState[] = [];  // fifth   – draw / reset stock
-  const foundToTab:   GameState[] = [];  // lowest  – un-win a card
+  // foundation→tableau moves are excluded: they are almost never required to win
+  // and including them multiplies the state space by an order of magnitude.
 
   // Draw from stock or reset waste → stock
   if (game.stock.length > 0) {
@@ -221,16 +222,6 @@ function generateMoves(game: GameState): GameState[] {
         wasteToTab.push(applyMove(game, { type: 'waste' }, [card], 'tableau', ci));
   }
 
-  // Foundation top → tableau (un-winning a card — lowest priority)
-  for (let fi = 0; fi < 4; fi++) {
-    const pile = game.foundations[fi];
-    if (!pile.length) continue;
-    const card = pile[pile.length - 1];
-    for (let ci = 0; ci < 7; ci++)
-      if (canMoveToTableau([card], game.tableau[ci]))
-        foundToTab.push(applyMove(game, { type: 'foundation', index: fi }, [card], 'tableau', ci));
-  }
-
   // Tableau → foundation or tableau
   for (let fromCol = 0; fromCol < 7; fromCol++) {
     const col = game.tableau[fromCol];
@@ -255,7 +246,7 @@ function generateMoves(game: GameState): GameState[] {
   }
 
   // Lowest priority first so highest ends up on top of the DFS stack
-  return [...foundToTab, ...stockMoves, ...tabToTab, ...wasteToTab, ...exposeHidden, ...toFoundation];
+  return [...stockMoves, ...tabToTab, ...wasteToTab, ...exposeHidden, ...toFoundation];
 }
 
 // DFS over all reachable states. Returns false only when the full reachable
@@ -267,21 +258,15 @@ const MAX_SOLVER_STATES = 200_000;
 export function isSolvable(game: GameState): boolean {
   if (game.foundations.every(f => f.length === 13)) return true;
 
-  console.log('Starting solver with game state', game);
-
   const visited = new Set<string>();
   const stack: GameState[] = [game];
   visited.add(gameStateKey(game));
 
   while (stack.length > 0) {
-    console.log(visited.size)
     if (visited.size >= MAX_SOLVER_STATES) return true; // benefit of the doubt
     const state = stack.pop()!;
     for (const next of generateMoves(state)) {
-      if (next.foundations.every(f => f.length === 13)) {
-        console.log('Valid solver path found with', visited.size, 'states explored');
-        return true;
-      }
+      if (next.foundations.every(f => f.length === 13)) return true;
       const key = gameStateKey(next);
       if (!visited.has(key)) {
         visited.add(key);
