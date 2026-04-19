@@ -50,9 +50,11 @@ A Windows 95-inspired personal portfolio built with Next.js. It simulates a comp
 
 | App | Description |
 |-----|-------------|
-| **Command Line** | ETHAN-DOS 6.22 emulator with a fully emulated filesystem persisted to `localStorage`. Supports command history (↑ / ↓) and double-Tab autocomplete. Includes an embedded Vim editor (`vim` / `vi` / `edit`) with Normal, Insert, Visual, and Command modes |
+| **Command Line** | ETHAN-DOS 6.22 emulator with a fully emulated filesystem persisted to `localStorage`. Supports command history (↑ / ↓) and double-Tab autocomplete. Includes an embedded Vim editor (`vim` / `vi` / `edit`) with Normal, Insert, Visual, and Command modes. Source files can be executed directly from the terminal via the JDoodle compiler API |
 
-**Supported commands:** `cd`, `ls` / `dir`, `mkdir`, `cat`, `touch`, `echo`, `vim` / `vi` / `edit`, `rm` / `del`, `cls` / `clear`, `date`, `time`, `help`, `ver`, `programs`, `run <app-id>`, `exit`
+**Supported commands:** `cd`, `ls` / `dir`, `mkdir`, `cat`, `touch`, `echo`, `vim` / `vi` / `edit`, `rm` / `del`, `cls` / `clear`, `date`, `time`, `help`, `ver`, `programs`, `run <app-id>`, `exec <file> [-in <stdin>]`, `exit`
+
+**Code execution:** Write a source file with `vim` or `touch`, then run it with `exec <path/to/file>`. Optional `-in` flag passes stdin (e.g. `exec hello.py -in world`). Run `exec langs` to list all supported languages and file extensions. Powered by the [JDoodle Compiler API](https://www.jdoodle.com/compiler-api/) — supports 110+ languages including Python, JavaScript, C, C++, Java, Rust, Go, and more.
 
 ---
 
@@ -65,6 +67,7 @@ A Windows 95-inspired personal portfolio built with Next.js. It simulates a comp
 - **SSE photo streaming** — album data streamed as Server-Sent Events from `/api/photos`
 - **Emulated filesystem** — localStorage-backed virtual filesystem with path resolution (`.`, `..`, `~`)
 - **Vim in the terminal** — full modal editor embedded inside the CLI with Normal, Insert, Visual, and Command modes
+- **In-terminal code execution** — `exec <file>` compiles and runs source files from the emulated filesystem via the JDoodle API; supports 110+ languages; optional `-in` flag for stdin input
 - **Minesweeper multiplayer** — shared game rooms via Firebase Realtime Database
 - **Museum image upload** — Admin panel uploads museum item images directly to Firebase Storage from the browser
 - **Classic Windows 95 UI** — authentic look and feel via [React95](https://github.com/React95/React95) and MS Sans Serif
@@ -127,6 +130,10 @@ NEXT_PUBLIC_SCORE_SECRET=
 
 # HMAC key for admin session tokens
 ADMIN_SECRET=
+
+# JDoodle Compiler API (https://www.jdoodle.com/compiler-api/)
+JDOODLE_CLIENT_ID=
+JDOODLE_CLIENT_SECRET=
 ```
 
 Firebase services required: **Firestore**, **Realtime Database**, **Storage**.
@@ -151,6 +158,12 @@ Firebase services required: **Firestore**, **Realtime Database**, **Storage**.
 | `POST` | `/api/wordle/token` | Issue a short-lived HMAC token |
 | `GET` | `/api/wordle` | Win leaderboard, sorted by wins descending |
 | `PUT` | `/api/wordle` | Submit a verified win `{ username, guesses, token, secureToken }` |
+
+### Compiler
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/api/compile` | Proxy to JDoodle — accepts `{ script, stdin, language, versionIndex }`, returns `{ output, statusCode, memory, cpuTime }` |
 
 ### Content
 
@@ -185,6 +198,7 @@ app/
     solitaire/            #   Score token + leaderboard
     sudoku/               #   Score token + leaderboard
     wordle/               #   Score token + leaderboard
+    compile/              #   JDoodle compiler proxy
     museum/               #   Museum data endpoint
     photos/               #   SSE photo stream
     weather/              #   Geocode + Open-Meteo proxy
@@ -202,6 +216,7 @@ app/
     useIsMobile.ts
   helpers/
     CommandHelpers.tsx    # CLI command implementations
+    LanguageHelper.ts     # File extension → JDoodle language/version map
   icons/icons.ts
   globals.scss            # All layout and component styles
   crt.scss                # CRT scanline and flicker effects
