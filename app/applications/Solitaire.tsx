@@ -614,7 +614,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
             <Button variant='menu' size='sm' onClick={skipToDone}>Skip</Button>
           )
         }
-        <Button variant='menu' size='sm' onClick={undo} disabled={history.length === 0 && !won}>Undo</Button>
+        <Button variant='menu' size='sm' onClick={undo} disabled={history.length === 0 || !won}>Undo</Button>
         {!won && stuck && (
           <span style={{ marginLeft: 8, fontSize: 12, color: '#800000', fontFamily: 'sans-serif', alignSelf: 'center' }}>
             No moves remaining
