@@ -1,8 +1,8 @@
 'use client';
 
-import { compress, compressAccurately, EImageType } from 'image-conversion';
 import { useEffect, useRef, useState } from 'react';
 import { Button, Frame, GroupBox, ProgressBar, Slider } from 'react95';
+import { compressImage } from '../helpers/CompressionHelper';
 
 interface CompressProps {
     windowId: string;
@@ -16,6 +16,9 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
     const [ imageUrl, setImageUrl ] = useState<string | null>(null);
     const [ compressionLevel, setCompressionLevel ] = useState<number>(50);
     const [ isCompressing, setIsCompressing ] = useState<boolean>(false);
+    const [ quality, setQuality ] = useState<number>(100);
+    const [ scale, setScale ] = useState<number>(1);
+    const [ originalSize, setOriginalSize ] = useState<{ width: number; height: number } | null>(null);
 
     useEffect(() => {
         document.getElementById(windowId)?.focus();
@@ -39,7 +42,13 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
 
         const imageFile: File = fileList[0];
 
+        const bitmap = await createImageBitmap(imageFile);
+        setOriginalSize({ width: bitmap.width, height: bitmap.height });
+        bitmap.close();
+
         setImage(imageFile);
+        setQuality(100);
+        setScale(1);
 
     }
 
@@ -50,21 +59,19 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
 
         try {
 
-            const targetSizeKb = Math.max(image.size / 1024 * (1 - (compressionLevel+10) / 100), .001);
+            // const targetSizeKb = Math.max(image.size / 1024 * (1 - (compressionLevel+10) / 100), .001);
 
-            console.log(`Target size: ${targetSizeKb} KB -- Current size: ${image.size / 1024} KB`);
-
-            const type: EImageType | undefined = image.type as EImageType | undefined;
+            // console.log(`Target size: ${targetSizeKb} KB -- Current size: ${image.size / 1024} KB`);
 
             setIsCompressing(true)
-            const compressedFile = await compressAccurately(image, {
-                size: targetSizeKb,
-                // type: type // For some reason this doesnt work for PNGs like documentation says it would :(
-            })
+            const nextQuality = Math.max(1, quality - compressionLevel);
+            const nextScale = scale * (1 - compressionLevel / 200);
+            const compressedFile = await compressImage(image, nextQuality, nextScale, originalSize ?? undefined);
             const renamedFile = new File([compressedFile], image.name, { type: compressedFile.type });
             setImage(_ => renamedFile);
+            setQuality(nextQuality);
+            setScale(nextScale);
             setIsCompressing(false)
-
 
         } catch (error) {
             console.log(error);
@@ -72,6 +79,12 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
         }
 
     }
+
+    const convertSizeToReadable = (sizeInBytes: number) => {
+        if (sizeInBytes < 1024) return `${sizeInBytes} B`;
+        if (sizeInBytes < 1024 * 1024) return `${(sizeInBytes / 1024).toFixed(2)} KB`;
+        return `${(sizeInBytes / (1024 * 1024)).toFixed(2)} MB`;
+    };
 
     const download = () => {
         if(!image) return
@@ -114,7 +127,7 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
                             marginTop: '10px',
                         }}>
                             <img src={imageUrl ?? defaultContent} alt="Selected" style={{ maxWidth: '75%', maxHeight: '300px', marginTop: '10px' }} />
-                            <p>Current Size: {isCompressing ? '---' : (image.size / 1024 / 1024).toFixed(3)} MB</p>
+                            <p>Current Size: <b>{isCompressing ? '---' : convertSizeToReadable(image.size)}</b></p>
                             <GroupBox label='Compression Settings' style={{ width: '90%' }}>
                                 <div style={{
                                     display: 'flex',
@@ -124,15 +137,15 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
                                 }}>
                                     <Slider 
                                         min={0} 
-                                        max={100} 
-                                        step={10}
+                                        max={99} 
+                                        step={1}
                                         defaultValue={50}
                                         value={compressionLevel}
                                         onChange={(value) => setCompressionLevel(value as number)}
                                         marks={[
                                             { value: 0, label: 'Light' },
                                             { value: 50, label: 'Medium' },
-                                            { value: 100, label: 'Extreme' }
+                                            { value: 99, label: 'Extreme' }
                                         ]}
                                         style={{
                                             width: '80%'
