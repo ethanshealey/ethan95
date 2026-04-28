@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Frame, Button, TextInput, SelectNative } from 'react95';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface AdminProps {
   windowId: string;
@@ -62,6 +63,10 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
   const [docs, setDocs] = useState<DocData[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const [filterText, setFilterText] = useState('');
+  const [sortCol, setSortCol] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
   const [editingDoc, setEditingDoc] = useState<DocData | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [editFields, setEditFields] = useState<Record<string, string>>({});
@@ -110,6 +115,9 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
     setScrapeUrl('');
     setScrapeError('');
     setUploadError('');
+    setFilterText('');
+    setSortCol(null);
+    setSortDir('asc');
     try {
       const res = await fetch(`/api/admin/${col}`, {
         headers: { Authorization: `Bearer ${tok}` },
@@ -263,6 +271,32 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
     }
   };
 
+  const handleSort = (col: string) => {
+    if (sortCol === col) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  };
+
+  const displayedDocs = useMemo(() => {
+    let result = docs;
+    if (filterText.trim()) {
+      const q = filterText.toLowerCase();
+      result = result.filter((doc) =>
+        Object.values(doc).some((v) => formatCell(v).toLowerCase().includes(q))
+      );
+    }
+    if (sortCol) {
+      result = [...result].sort((a, b) => {
+        const av = formatCell(a[sortCol]);
+        const bv = formatCell(b[sortCol]);
+        const na = Number(av), nb = Number(bv);
+        const cmp = !isNaN(na) && !isNaN(nb) ? na - nb : av.localeCompare(bv);
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+    }
+    return result;
+  }, [docs, filterText, sortCol, sortDir]);
+
+  const isMobile = useIsMobile();
   const stop = (e: React.MouseEvent) => { e.stopPropagation(); focusWindow(windowId); };
 
   // Login screen
@@ -301,21 +335,45 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
       style={{ display: 'flex', flexDirection: 'column', padding: '8px', gap: '8px', height: '100%', boxSizing: 'border-box' }}>
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-        <SelectNative
-          options={COLLECTION_OPTIONS}
-          value={activeCollection}
-          onChange={(opt: { value: string }) => setActiveCollection(opt.value as Collection)}
-          width="180px"
-        />
-        <Button onClick={startAdd} disabled={loading} style={{ marginLeft: 'auto' }}>
-          Add
-        </Button>
-        <Button onClick={() => fetchDocs(activeCollection, token)} disabled={loading}>
-          Refresh
-        </Button>
-        <Button onClick={() => setToken(null)}>Logout</Button>
-      </div>
+      {isMobile ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <SelectNative
+            options={COLLECTION_OPTIONS}
+            value={activeCollection}
+            onChange={(opt: { value: string }) => setActiveCollection(opt.value as Collection)}
+            width="100%"
+          />
+          <TextInput
+            value={filterText}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilterText(e.target.value)}
+            placeholder="Filter..."
+            fullWidth
+          />
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <Button onClick={startAdd} disabled={loading} fullWidth>Add</Button>
+            <Button onClick={() => fetchDocs(activeCollection, token)} disabled={loading} fullWidth>Refresh</Button>
+            <Button onClick={() => setToken(null)} fullWidth>Logout</Button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <SelectNative
+            options={COLLECTION_OPTIONS}
+            value={activeCollection}
+            onChange={(opt: { value: string }) => setActiveCollection(opt.value as Collection)}
+            width="180px"
+          />
+          <TextInput
+            value={filterText}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilterText(e.target.value)}
+            placeholder="Filter..."
+            style={{ flex: 1 }}
+          />
+          <Button onClick={startAdd} disabled={loading}>Add</Button>
+          <Button onClick={() => fetchDocs(activeCollection, token)} disabled={loading}>Refresh</Button>
+          <Button onClick={() => setToken(null)}>Logout</Button>
+        </div>
+      )}
 
       {/* Edit / Add Panel */}
       {(editingDoc || isAdding) && (
@@ -419,24 +477,29 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
             <thead>
-              <tr>
+              <tr style={{ background: '#000080', color: '#ffffff' }}>
                 {columns.map((col) => (
-                  <th key={col} style={{
-                    textAlign: 'left', padding: '4px 8px',
-                    borderBottom: '1px solid #808080', whiteSpace: 'nowrap',
-                  }}>
-                    {col}
+                  <th
+                    key={col}
+                    onClick={() => handleSort(col)}
+                    style={{
+                      textAlign: 'left', padding: '4px 8px', whiteSpace: 'nowrap',
+                      cursor: 'pointer', userSelect: 'none',
+                    }}
+                  >
+                    {col}{sortCol === col ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}
                   </th>
                 ))}
-                <th style={{ textAlign: 'left', padding: '4px 8px', borderBottom: '1px solid #808080' }}>
-                  Actions
-                </th>
+                <th style={{ padding: '4px 8px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {docs.map((docItem, i) => (
-                <tr key={String(docItem.id)}
-                  style={{ background: editingDoc?.id === docItem.id ? '#d0e4f7' : i % 2 === 0 ? 'transparent' : '#f0f0f0' }}>
+              {displayedDocs.map((docItem, i) => (
+                <tr key={String(docItem.id)} style={{
+                  background: editingDoc?.id === docItem.id
+                    ? '#d0e4f7'
+                    : i % 2 === 0 ? '#ffffff' : '#e8e4e0',
+                }}>
                   {columns.map((col) => (
                     <td key={col} style={{
                       padding: '3px 8px', maxWidth: '200px',

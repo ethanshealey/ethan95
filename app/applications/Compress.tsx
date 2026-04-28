@@ -1,13 +1,49 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Button, Frame, GroupBox, ProgressBar, Slider } from 'react95';
-import { compressImage } from '../helpers/CompressionHelper';
+import { Button, Frame, GroupBox, Slider } from 'react95';
 
 interface CompressProps {
     windowId: string;
     focusWindow: (id: string) => void;
     defaultContent?: string;
+}
+
+/** Scale + encode ImageData to a JPEG File using DOM canvas (main thread only). */
+const encodeImageData = (
+    imageData: ImageData,
+    filename: string,
+    scale: number,
+    targetSize?: { width: number; height: number },
+): Promise<File> => {
+    const type = 'image/jpeg'
+    const smallW = Math.max(1, Math.round(imageData.width * scale))
+    const smallH = Math.max(1, Math.round(imageData.height * scale))
+    const outW = targetSize?.width ?? smallW
+    const outH = targetSize?.height ?? smallH
+
+    const src = document.createElement('canvas')
+    src.width = imageData.width
+    src.height = imageData.height
+    src.getContext('2d')!.putImageData(imageData, 0, 0)
+
+    const small = document.createElement('canvas')
+    small.width = smallW
+    small.height = smallH
+    const smallCtx = small.getContext('2d')!
+    smallCtx.imageSmoothingEnabled = false
+    smallCtx.drawImage(src, 0, 0, smallW, smallH)
+
+    const out = document.createElement('canvas')
+    out.width = outW
+    out.height = outH
+    const outCtx = out.getContext('2d')!
+    outCtx.imageSmoothingEnabled = false
+    outCtx.drawImage(small, 0, 0, outW, outH)
+
+    return new Promise<File>(resolve =>
+        out.toBlob(b => resolve(new File([b!], filename, { type })), type, 0.95)
+    )
 }
 
 export default function Compress({ windowId, focusWindow, defaultContent }: CompressProps) {
@@ -20,8 +56,18 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
     const [ scale, setScale ] = useState<number>(1);
     const [ originalSize, setOriginalSize ] = useState<{ width: number; height: number } | null>(null);
 
+    const workerPoolRef = useRef<Worker[]>([]);
+
     useEffect(() => {
         document.getElementById(windowId)?.focus();
+        const n = Math.min(Math.max(navigator.hardwareConcurrency ?? 4, 1), 8);
+        workerPoolRef.current = Array.from({ length: n }, () =>
+            new Worker(new URL('../helpers/CompressionWorker.ts', import.meta.url))
+        );
+        return () => {
+            workerPoolRef.current.forEach(w => w.terminate());
+            workerPoolRef.current = [];
+        };
     }, [])
 
     useEffect(() => {
@@ -32,16 +78,10 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
     }, [image])
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-
         const fileList: FileList | null = e.target.files ?? null;
-
-        if (!fileList || fileList.length === 0) {
-            console.error('No file selected');
-            return;
-        }
+        if (!fileList || fileList.length === 0) return;
 
         const imageFile: File = fileList[0];
-
         const bitmap = await createImageBitmap(imageFile);
         setOriginalSize({ width: bitmap.width, height: bitmap.height });
         bitmap.close();
@@ -49,35 +89,78 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
         setImage(imageFile);
         setQuality(100);
         setScale(1);
-
     }
 
-
     const compress = async () => {
+        const workers = workerPoolRef.current;
+        if (!image || workers.length === 0) return;
 
-        if (!image) return
+        setIsCompressing(true);
+        const nextQuality = Math.max(1, quality - compressionLevel);
+        const nextScale = scale * (1 - compressionLevel / 200);
 
         try {
+            // Decode image to raw pixels on the main thread
+            const bitmap = await createImageBitmap(image);
+            const { width, height } = bitmap;
+            const srcCanvas = document.createElement('canvas');
+            srcCanvas.width = width;
+            srcCanvas.height = height;
+            const srcCtx = srcCanvas.getContext('2d')!;
+            srcCtx.drawImage(bitmap, 0, 0);
+            bitmap.close();
+            const { data } = srcCtx.getImageData(0, 0, width, height);
 
-            // const targetSizeKb = Math.max(image.size / 1024 * (1 - (compressionLevel+10) / 100), .001);
+            // Split into strips aligned to 8-px rows so blocks don't straddle boundaries
+            const n = workers.length;
+            const stripH = Math.ceil(Math.ceil(height / n) / 8) * 8;
 
-            // console.log(`Target size: ${targetSizeKb} KB -- Current size: ${image.size / 1024} KB`);
+            const stripDefs = Array.from({ length: n }, (_, i) => {
+                const startY = i * stripH;
+                const rows = Math.min(startY + stripH, height) - startY;
+                return startY < height ? { startY, rows } : null;
+            }).filter((s): s is { startY: number; rows: number } => s !== null);
 
-            setIsCompressing(true)
-            const nextQuality = Math.max(1, quality - compressionLevel);
-            const nextScale = scale * (1 - compressionLevel / 200);
-            const compressedFile = await compressImage(image, nextQuality, nextScale, originalSize ?? undefined);
+            // Copy each strip into its own buffer and transfer to a worker
+            const results = await Promise.all(
+                stripDefs.map(({ startY, rows }, i) =>
+                    new Promise<{ startY: number; pixels: Uint8ClampedArray }>((resolve, reject) => {
+                        const strip = new Uint8ClampedArray(rows * width * 4);
+                        strip.set(data.subarray(startY * width * 4, (startY + rows) * width * 4));
+                        workers[i].onmessage = (e) =>
+                            resolve({ startY, pixels: new Uint8ClampedArray(e.data.pixels) });
+                        workers[i].onerror = reject;
+                        workers[i].postMessage(
+                            { pixels: strip.buffer, width, height: rows, quality: nextQuality },
+                            [strip.buffer],
+                        );
+                    })
+                )
+            );
+
+            // Reassemble strips into a single ImageData
+            const outData = new Uint8ClampedArray(width * height * 4);
+            for (const { startY, pixels } of results) {
+                outData.set(pixels, startY * width * 4);
+            }
+
+            // Scale + encode on the main thread
+            const compressedFile = await encodeImageData(
+                new ImageData(outData, width, height),
+                image.name,
+                nextScale,
+                originalSize ?? undefined,
+            );
             const renamedFile = new File([compressedFile], image.name, { type: compressedFile.type });
             setImage(_ => renamedFile);
             setQuality(nextQuality);
             setScale(nextScale);
-            setIsCompressing(false)
 
-        } catch (error) {
-            console.log(error);
-            setIsCompressing(false)
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsCompressing(false);
         }
-
     }
 
     const convertSizeToReadable = (sizeInBytes: number) => {
@@ -87,15 +170,14 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
     };
 
     const download = () => {
-        if(!image) return
-
+        if (!image) return;
         const url = URL.createObjectURL(image);
-        const downloadLink = document.createElement('a');
-        downloadLink.href = url;
-        downloadLink.download = `compressed_${image.name}`;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `compressed_${image.name}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
 
@@ -135,9 +217,9 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
                                     alignItems: 'center',
                                     marginTop: '10px',
                                 }}>
-                                    <Slider 
-                                        min={0} 
-                                        max={99} 
+                                    <Slider
+                                        min={0}
+                                        max={99}
                                         step={1}
                                         defaultValue={50}
                                         value={compressionLevel}
@@ -147,12 +229,12 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
                                             { value: 50, label: 'Medium' },
                                             { value: 99, label: 'Extreme' }
                                         ]}
-                                        style={{
-                                            width: '80%'
-                                        }}
+                                        style={{ width: '80%' }}
                                     />
                                 </div>
-                                <Button onClick={compress} fullWidth style={{ marginTop: '10px' }}>Compress</Button>
+                                <Button onClick={compress} fullWidth style={{ marginTop: '10px' }} disabled={isCompressing}>
+                                    {isCompressing ? 'Compressing...' : 'Compress'}
+                                </Button>
                             </GroupBox>
                             <Button onClick={download} style={{ marginTop: '10px' }} variant='default'>Download</Button>
                         </div>

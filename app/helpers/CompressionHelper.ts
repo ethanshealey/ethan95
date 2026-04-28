@@ -61,7 +61,7 @@ export const compressImage = async (
     }
   }
 
-  const result = await imageDataToFile(new ImageData(out, width, height), file.name, scale, targetSize)
+  const result = await imageDataToFile(new ImageData(out, width, height), file.name, scale, targetSize, file.type)
   return result
 
 }
@@ -86,7 +86,7 @@ const imageDataToFile = async (
   filename: string,
   scale = 1,
   targetSize?: { width: number; height: number },
-  type = 'image/webp'
+  type = 'image/jpeg'
 ): Promise<File> => {
   const smallW = Math.max(1, Math.round(imageData.width * scale))
   const smallH = Math.max(1, Math.round(imageData.height * scale))
