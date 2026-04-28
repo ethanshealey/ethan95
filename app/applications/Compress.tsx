@@ -15,6 +15,7 @@ const encodeImageData = (
     filename: string,
     scale: number,
     targetSize?: { width: number; height: number },
+    jpegQuality = 0.92,
 ): Promise<File> => {
     const type = 'image/jpeg'
     const smallW = Math.max(1, Math.round(imageData.width * scale))
@@ -42,7 +43,7 @@ const encodeImageData = (
     outCtx.drawImage(small, 0, 0, outW, outH)
 
     return new Promise<File>(resolve =>
-        out.toBlob(b => resolve(new File([b!], filename, { type })), type, 0.95)
+        out.toBlob(b => resolve(new File([b!], filename, { type })), type, jpegQuality)
     )
 }
 
@@ -132,7 +133,7 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
                         workers[i].onerror = reject;
                         workers[i].postMessage(
                             { pixels: strip.buffer, width, height: rows, quality: nextQuality },
-                            [strip.buffer],
+                            { transfer: [strip.buffer as ArrayBuffer] },
                         );
                     })
                 )
@@ -150,6 +151,7 @@ export default function Compress({ windowId, focusWindow, defaultContent }: Comp
                 image.name,
                 nextScale,
                 originalSize ?? undefined,
+                nextQuality / 100,
             );
             const renamedFile = new File([compressedFile], image.name, { type: compressedFile.type });
             setImage(_ => renamedFile);

@@ -131,5 +131,5 @@ addEventListener('message', (e: MessageEvent) => {
     quality: number
   }
   const result = processStrip(new Uint8ClampedArray(pixels), width, height, buildQuant(quality))
-  postMessage({ pixels: result.buffer }, [result.buffer])
+  postMessage({ pixels: result.buffer }, { transfer: [result.buffer as ArrayBuffer] })
 })
