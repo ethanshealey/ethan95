@@ -14,7 +14,7 @@ interface AdminProps {
 type DocData = Record<string, unknown>;
 
 const COLLECTIONS = [
-  'minesweeper', 'albums', 'solitaire', 'sudoku',
+  'minesweeper', 'albums', 'solitaire', 'freecell', 'sudoku',
   'museum_cameras', 'museum_computers', 'museum_consoles',
 ] as const;
 type Collection = (typeof COLLECTIONS)[number];

@@ -17,6 +17,9 @@ const Minesweeper      = React.lazy(() => import('./Minesweeper'));
 const MinesweeperWinner  = React.lazy(() => import('./MinesweeperWinner'));
 const MinesweeperRecords = React.lazy(() => import('./MinesweeperRecords'));
 const Solitaire          = React.lazy(() => import('./Solitaire'));
+const FreeCell              = React.lazy(() => import('./FreeCell'));
+const FreeCellWinner        = React.lazy(() => import('./FreeCellWinner'));
+const FreeCellLeaderboard   = React.lazy(() => import('./FreeCellLeaderboard'));
 const SolitaireWinner    = React.lazy(() => import('./SolitaireWinner'));
 const SolitaireLeaderboard = React.lazy(() => import('./SolitaireLeaderboard'));
 const Admin            = React.lazy(() => import('./Admin'));
@@ -63,6 +66,9 @@ export const APPLICATIONS: RegisteredApp[] = [
   { id: 'minesweeper-winner',    name: 'Minesweeper Winner',    icon: Icons.MINESWEEPER,                    component: MinesweeperWinner,    fitContent: true },
   { id: 'minesweeper-records',   name: 'Minesweeper Records',   icon: Icons.MINESWEEPER,                    component: MinesweeperRecords,   fitContent: true },
   { id: 'solitaire',             name: 'Solitaire',             icon: Icons.GAME_SOLITAIRE,                 component: Solitaire,            fitContent: true },
+  { id: 'freecell',              name: 'FreeCell',              icon: Icons.GAME_FREECELL,                 component: FreeCell,             fitContent: true },
+  { id: 'freecell-winner',      name: 'FreeCell Winner',       icon: Icons.GAME_FREECELL,                 component: FreeCellWinner,       fitContent: true },
+  { id: 'freecell-leaderboard', name: 'FreeCell Leaderboard',  icon: Icons.GAME_FREECELL,                 component: FreeCellLeaderboard,  fitContent: true },
   { id: 'solitaire-winner',      name: 'Solitaire Winner',      icon: Icons.GAME_SOLITAIRE,                 component: SolitaireWinner,      fitContent: true },
   { id: 'solitaire-leaderboard', name: 'Solitaire Leaderboard', icon: Icons.GAME_SOLITAIRE,                 component: SolitaireLeaderboard, fitContent: true },
   { id: 'admin',                 name: 'Admin',                 icon: Icons.DIRECTORY_CONTROL_PANEL,        component: Admin },

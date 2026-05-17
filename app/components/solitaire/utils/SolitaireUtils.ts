@@ -1,4 +1,7 @@
-export type Suit = 'clubs' | 'diamonds' | 'hearts' | 'spades';
+export type { Suit, BaseCard } from '../../cards/cardUtils';
+export { SUIT_ORDER, SUIT_SYMBOLS, RANK_LABELS, CARD_W, CARD_H, isRed, getFoundationIndex } from '../../cards/cardUtils';
+import { Suit, SUIT_ORDER, RANK_LABELS, CARD_W, CARD_H, isRed, getFoundationIndex } from '../../cards/cardUtils';
+
 export type Card = { suit: Suit; rank: number; faceUp: boolean };
 export type GameState = {
   stock: Card[];
@@ -13,8 +16,6 @@ export type Source =
   | { type: 'foundation'; index: number };
 
 // Layout
-export const CARD_W = 65;
-export const CARD_H = 90;
 export const COL_STEP = 75;
 export const PADDING = 10;
 export const TABLEAU_Y = 120;
@@ -31,14 +32,6 @@ export function tableauCardY(col: Card[], cardIndex: number): number {
   return y;
 }
 
-export const SUIT_ORDER: Suit[] = ['clubs', 'diamonds', 'hearts', 'spades'];
-export const SUIT_SYMBOLS: Record<Suit, string> = {
-  clubs: '♣', diamonds: '♦', hearts: '♥', spades: '♠',
-};
-export const RANK_LABELS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-
-export const isRed = (suit: Suit) => suit === 'hearts' || suit === 'diamonds';
-export const getFoundationIndex = (suit: Suit) => SUIT_ORDER.indexOf(suit);
 
 function createDeck(): Card[] {
   return SUIT_ORDER.flatMap(suit =>

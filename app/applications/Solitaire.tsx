@@ -10,7 +10,7 @@ import {
   dealGame, canMoveToTableau, canMoveToFoundation,
   getFoundationIndex, applyMove, colX, tableauCardY, findHint, allCardsFlipped,
 } from '../components/solitaire/utils/SolitaireUtils';
-import { CardFace, CardBack, EmptyPile } from '../components/solitaire/SolitaireCard';
+import { CardFace, CardBack, EmptyPile } from '../components/cards/CardComponents';
 import { set } from 'firebase/database';
 
 const DRAG_THRESHOLD = 8; // px of movement before drag activates

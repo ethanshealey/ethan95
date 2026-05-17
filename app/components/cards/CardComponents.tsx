@@ -1,4 +1,4 @@
-import { Card, CARD_W, CARD_H, SUIT_SYMBOLS, RANK_LABELS, isRed } from './utils/SolitaireUtils';
+import { BaseCard, CARD_W, CARD_H, SUIT_SYMBOLS, RANK_LABELS, isRed } from './cardUtils';
 
 export type Highlight = 'source' | 'target' | 'selected' | undefined;
 
@@ -12,7 +12,7 @@ function highlightBoxShadow(highlight: Highlight): string | undefined {
 }
 
 export function CardFace({ card, style, hidden, highlight, onPointerDown, onDoubleClick }: {
-  card: Card;
+  card: BaseCard;
   style?: React.CSSProperties;
   hidden?: boolean;
   highlight?: Highlight;
