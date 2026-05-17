@@ -96,16 +96,8 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
   useEffect(() => {
     if (!containerRef.current) return;
     const obs = new ResizeObserver(entries => {
-      const w = entries[0].contentRect.width;
-      const scaleW = w / BOARD_W;
-      if (!isMobileRef.current) {
-        setScale(Math.min(1, scaleW));
-        return;
-      }
-      const containerTop = containerRef.current!.getBoundingClientRect().top;
-      const availableH = window.innerHeight - containerTop;
-      const scaleH = availableH / BOARD_H;
-      setScale(Math.min(scaleW, Math.max(scaleH, 0.1)));
+      const { width: w, height: h } = entries[0].contentRect;
+      setScale(Math.min(1, w / BOARD_W, h / BOARD_H));
     });
     obs.observe(containerRef.current);
     return () => obs.disconnect();
@@ -627,22 +619,37 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
         ref={containerRef}
         style={{
           width: '100%',
+          flex: 1,
           overflow: 'hidden',
-          height: BOARD_H * scale,
           touchAction: 'none',
           userSelect: 'none',
+          backgroundColor: '#008000',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
         <div
+          style={{
+            width: BOARD_W * scale,
+            height: BOARD_H * scale,
+            overflow: 'hidden',
+            position: 'relative',
+            flexShrink: 0,
+          }}
+        >
+        <div
           ref={boardRef}
           style={{
-            position: 'relative',
+            position: 'absolute',
+            top: 0,
+            left: 0,
             backgroundColor: '#008000',
             width: BOARD_W,
             height: BOARD_H,
             cursor: drag ? 'grabbing' : 'default',
             transformOrigin: 'top left',
-            transform: scale !== 1 ? `scale(${scale})` : undefined,
+            transform: `scale(${scale})`,
           }}
         >
           {renderStock()}
@@ -673,6 +680,7 @@ export default function Solitaire({ windowId, focusWindow }: SolitaireProps) {
             </>
           )}
 
+        </div>
         </div>
       </div>
     </div>

@@ -10,19 +10,25 @@ interface SettingsProps {
 }
 
 export default function Settings({ windowId, focusWindow }: SettingsProps) {
-  const { crtEnabled, setCrtEnabled } = useSettings();
+  const { crtEnabled, setCrtEnabled, clickSoundEnabled, setClickSoundEnabled } = useSettings();
 
   const stop = (e: React.MouseEvent) => { e.stopPropagation(); focusWindow(windowId); };
 
   return (
     <div className="app-content" onClick={stop} style={{ padding: '8px', boxSizing: 'border-box' }}>
-      <Frame variant="well" style={{ padding: '12px', flex: 1, boxSizing: 'border-box' }}>
-        <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '13px' }}>Display</div>
+      <Frame variant="well" style={{ padding: '12px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '13px' }}>Options</div>
         <Checkbox
           checked={crtEnabled}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCrtEnabled(e.target.checked)}
           label="CRT screen effect"
           name="crt-toggle"
+        />
+        <Checkbox
+          checked={clickSoundEnabled}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setClickSoundEnabled(e.target.checked)}
+          label="Mouse click sound"
+          name="click-sound-toggle"
         />
       </Frame>
     </div>

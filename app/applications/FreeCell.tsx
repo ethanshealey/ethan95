@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect, useCallback, Fragment } from 'react';
 import { Button, Frame, Toolbar, MenuList, MenuListItem, Separator } from 'react95';
 import { useWindowManager } from '../hooks/useWindowManager';
-import { useIsMobile } from '../hooks/useIsMobile';
 import { CardFace, CardBack, EmptyPile } from '../components/cards/CardComponents';
 import {
   Card, GameState, Source, Suit,
@@ -28,7 +27,6 @@ export default function FreeCell({ windowId, focusWindow }: FreeCellProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState(1);
-  const isMobile = useIsMobile();
   const scaleRef = useRef(1);
   const dragRef = useRef(drag);
   const selectedRef = useRef(selected);
@@ -45,20 +43,12 @@ export default function FreeCell({ windowId, focusWindow }: FreeCellProps) {
   useEffect(() => {
     if (!containerRef.current) return;
     const obs = new ResizeObserver(entries => {
-      const w = entries[0].contentRect.width;
-      const scaleW = w / BOARD_W;
-      if (!isMobile) {
-        setScale(Math.min(1, scaleW));
-        return;
-      }
-      const containerTop = containerRef.current!.getBoundingClientRect().top;
-      const availableH = window.innerHeight - containerTop;
-      const scaleH = availableH / BOARD_H;
-      setScale(Math.min(scaleW, Math.max(scaleH, 0.1)));
+      const { width: w, height: h } = entries[0].contentRect;
+      setScale(Math.min(1, w / BOARD_W, h / BOARD_H));
     });
     obs.observe(containerRef.current);
     return () => obs.disconnect();
-  }, [isMobile]);
+  }, []);
 
   useEffect(() => {
     if (won) openWindow('freecell-winner', { props: { won: true } });
@@ -340,29 +330,44 @@ export default function FreeCell({ windowId, focusWindow }: FreeCellProps) {
         ref={containerRef}
         style={{
           width: '100%',
+          flex: 1,
           overflow: 'hidden',
-          height: BOARD_H * scale,
           touchAction: 'none',
           userSelect: 'none',
-          marginTop: 0,
+          backgroundColor: '#008000',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
         <div
-          ref={boardRef}
           style={{
+            width: BOARD_W * scale,
+            height: BOARD_H * scale,
+            overflow: 'hidden',
             position: 'relative',
-            backgroundColor: '#008000',
-            width: BOARD_W,
-            height: BOARD_H,
-            transformOrigin: 'top left',
-            transform: scale !== 1 ? `scale(${scale})` : undefined,
-            cursor: drag ? 'grabbing' : 'default',
+            flexShrink: 0,
           }}
         >
-          {renderFreeCells()}
-          {renderFoundations()}
-          {renderTableau()}
-          {drag && renderDrag(drag)}
+          <div
+            ref={boardRef}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              backgroundColor: '#008000',
+              width: BOARD_W,
+              height: BOARD_H,
+              transformOrigin: 'top left',
+              transform: `scale(${scale})`,
+              cursor: drag ? 'grabbing' : 'default',
+            }}
+          >
+            {renderFreeCells()}
+            {renderFoundations()}
+            {renderTableau()}
+            {drag && renderDrag(drag)}
+          </div>
         </div>
       </div>
     </div>
