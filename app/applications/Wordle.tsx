@@ -113,6 +113,7 @@ export default function Wordle({ windowId, focusWindow }: WordleProps) {
 
   const menuRef         = useRef<HTMLDivElement>(null);
   const wrapperRef      = useRef<HTMLDivElement>(null);
+  const boardAreaRef    = useRef<HTMLDivElement>(null);
   const msgTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wonHandledRef   = useRef(false);
   const gameStatusRef   = useRef(gameStatus);
@@ -143,18 +144,19 @@ export default function Wordle({ windowId, focusWindow }: WordleProps) {
     wonHandledRef.current = false;
   }, []);
 
-  // Compute cell size from wrapper width on mobile
+  // Compute cell size from available board area (width and height) on mobile
   useEffect(() => {
     const compute = () => {
-      if (!wrapperRef.current) return;
+      if (!boardAreaRef.current) return;
       if (!isMobileRef.current) { setCellSize(CELL_DESKTOP); return; }
-      const w = wrapperRef.current.getBoundingClientRect().width;
+      const { width: w, height: h } = boardAreaRef.current.getBoundingClientRect();
       if (w < 10) return;
-      const fromWidth = Math.floor((w - 32 - GAP * 4) / 5);
-      setCellSize(Math.min(68, Math.max(40, fromWidth)));
+      const fromWidth  = Math.floor((w - 32 - GAP * 4) / 5);
+      const fromHeight = Math.floor((h - 16 - GAP * 5) / 6);
+      setCellSize(Math.min(68, Math.max(30, Math.min(fromWidth, fromHeight))));
     };
     const obs = new ResizeObserver(compute);
-    if (wrapperRef.current) obs.observe(wrapperRef.current);
+    if (boardAreaRef.current) obs.observe(boardAreaRef.current);
     window.addEventListener('resize', compute);
     return () => { obs.disconnect(); window.removeEventListener('resize', compute); };
   }, []);
@@ -390,8 +392,11 @@ export default function Wordle({ windowId, focusWindow }: WordleProps) {
         </div>
       )}
 
-      {/* Board */}
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 16px 8px' }}>
+      {/* Board — fills remaining height so keyboard is never pushed off screen */}
+      <div
+        ref={boardAreaRef}
+        style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 16px 4px', overflow: 'hidden' }}
+      >
         <div style={{ display: 'flex', flexDirection: 'column', gap: GAP }}>
           {board.map((row, r) => (
             <div
@@ -409,8 +414,8 @@ export default function Wordle({ windowId, focusWindow }: WordleProps) {
         </div>
       </div>
 
-      {/* Keyboard */}
-      <div style={{ padding: '0 8px 12px' }}>
+      {/* Keyboard — pinned at bottom, never shrinks */}
+      <div style={{ padding: '0 8px 8px', flexShrink: 0 }}>
         {QWERTY.map((row, r) => (
           <div key={r} style={{ display: 'flex', justifyContent: 'center', gap: 3, marginBottom: 3 }}>
             {row.map(key => (
