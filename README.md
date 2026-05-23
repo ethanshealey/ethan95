@@ -56,7 +56,7 @@ A Windows 95-inspired personal portfolio built with Next.js. It simulates a comp
 
 **Supported commands:** `cd`, `ls` / `dir`, `mkdir`, `cat`, `touch`, `echo`, `vim` / `vi` / `edit`, `rm` / `del`, `cls` / `clear`, `date`, `time`, `help`, `ver`, `programs`, `run <app-id>`, `exec <file> [-in <stdin>]`, `exit`
 
-**Code execution:** Write a source file with `vim` or `touch`, then run it with `exec <path/to/file>`. Optional `-in` flag passes stdin (e.g. `exec hello.py -in world`). Run `exec langs` to list all supported languages and file extensions. Powered by a self-hosted [Judge0](https://github.com/judge0/judge0) instance — supports 40+ languages including Python, JavaScript, C, C++, Java, Rust, Go, and more.
+**Code execution:** Write a source file with `vim` or `touch`, then run it with `exec <path/to/file>`. Optional `-in` flag passes stdin (e.g. `exec hello.py -in world`). Run `exec langs` to list all supported languages and file extensions. Powered by a self-hosted [Judge0](https://github.com/judge0/judge0) instance at `compile.ethanshealey.com` — supports 40+ languages including Python, JavaScript, C, C++, Java, Rust, Go, and more.
 
 ---
 
@@ -70,7 +70,7 @@ A Windows 95-inspired personal portfolio built with Next.js. It simulates a comp
 - **SSE photo streaming** — album data streamed as Server-Sent Events from `/api/photos`
 - **Emulated filesystem** — localStorage-backed virtual filesystem with path resolution (`.`, `..`, `~`)
 - **Vim in the terminal** — full modal editor embedded inside the CLI with Normal, Insert, Visual, and Command modes
-- **In-terminal code execution** — `exec <file>` compiles and runs source files from the emulated filesystem via the JDoodle API; supports 110+ languages; optional `-in` flag for stdin input
+- **In-terminal code execution** — `exec <file>` compiles and runs source files from the emulated filesystem via a self-hosted Judge0 instance; optional `-in` flag for stdin input; submissions are HMAC-signed before proxying
 - **Minesweeper multiplayer** — shared game rooms via Firebase Realtime Database
 - **Museum image upload** — Admin panel uploads museum item images directly to Firebase Storage from the browser
 - **Classic Windows 95 UI** — authentic look and feel via [React95](https://github.com/React95/React95) and MS Sans Serif
@@ -134,7 +134,7 @@ NEXT_PUBLIC_SCORE_SECRET=
 # HMAC key for admin session tokens
 ADMIN_SECRET=
 
-# Auth token for self-hosted Judge0 instance (compile.ethanshealey.com)
+# Auth token for self-hosted Judge0 instance at compile.ethanshealey.com
 JUDGE0_API_TOKEN=
 ```
 
@@ -168,7 +168,8 @@ Firebase services required: **Firestore**, **Realtime Database**, **Storage**.
 
 | Method | Route | Description |
 |--------|-------|-------------|
-| `POST` | `/api/compile` | Proxy to JDoodle — accepts `{ script, stdin, language, versionIndex }`, returns `{ output, statusCode, memory, cpuTime }` |
+| `POST` | `/api/compile/token` | Issue a short-lived HMAC token for a compile submission |
+| `POST` | `/api/compile` | Proxy to self-hosted Judge0 — accepts `{ script, stdin, languageId, token, secureToken }`, returns `{ output, status, time, memory }` |
 
 ### Content
 
@@ -204,7 +205,7 @@ app/
     freecell/             #   Score token + leaderboard
     sudoku/               #   Score token + leaderboard
     wordle/               #   Score token + leaderboard
-    compile/              #   JDoodle compiler proxy
+    compile/              #   Judge0 compiler proxy (HMAC-signed)
     museum/               #   Museum data endpoint
     photos/               #   SSE photo stream
     weather/              #   Geocode + Open-Meteo proxy
@@ -222,7 +223,7 @@ app/
     useIsMobile.ts
   helpers/
     CommandHelpers.tsx    # CLI command implementations
-    LanguageHelper.ts     # File extension → JDoodle language/version map
+    LanguageHelper.ts     # File extension → Judge0 language ID map
   icons/icons.ts
   globals.scss            # All layout and component styles
   crt.scss                # CRT scanline and flicker effects
