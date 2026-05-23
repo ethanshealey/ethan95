@@ -66,6 +66,11 @@ const TaskBar = () => {
     }
   }
 
+  const handleTrayItemDoubleClick = (windowId: string) => {
+    const window = windows.find(w => w.id === windowId)
+    if (!window?.isMinimized) toggleMinimize(windowId)
+  }
+
   const SHUTDOWN = () => {
     (document.getElementById('switch') as HTMLInputElement).checked = false
   }
@@ -217,6 +222,7 @@ const TaskBar = () => {
                 <Button
                   key={window.id}
                   onClick={() => handleTrayItemClick(window.id)}
+                  onDoubleClick={() => handleTrayItemDoubleClick(window.id)}
                   active={window.focused && !window.isMinimized}
                   style={{
                     fontSize: '11px',

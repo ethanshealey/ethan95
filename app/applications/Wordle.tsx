@@ -429,3 +429,4 @@ export default function Wordle({ windowId, focusWindow }: WordleProps) {
     </div>
   );
 }
+

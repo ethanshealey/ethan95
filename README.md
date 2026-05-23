@@ -13,7 +13,7 @@ A Windows 95-inspired personal portfolio built with Next.js. It simulates a comp
 | **My Documents** | Launcher for Photos, My Projects, Document Viewer, and Notepad |
 | **Programs** | Full list of every registered application; click to open |
 | **Run** | Open any app by typing its registered ID |
-| **Settings** | Toggle the CRT monitor effect on/off |
+| **Settings** | Toggle the CRT monitor effect and mouse click sound on/off |
 | **Recycle Bin** | Intentionally empty |
 | **Internet Explorer** | Embedded browser (`<iframe>`) with a URL bar and preset bookmarks |
 | **Notepad** | Plain-text editor; accepts a `defaultContent` prop for pre-filled content |
@@ -39,11 +39,13 @@ A Windows 95-inspired personal portfolio built with Next.js. It simulates a comp
 | **Games** | Hub launcher for all games |
 | **Minesweeper** | Beginner / Intermediate / Expert difficulties; flood-fill reveal; safe first click; real-time multiplayer via Firebase Realtime Database; HMAC-signed score submission |
 | **Minesweeper Records** | Leaderboard sorted by best time per difficulty |
-| **Solitaire** | Klondike with drag-and-drop and tap-to-select, undo, web-worker solver hint; HMAC-signed win leaderboard |
+| **Solitaire** | Klondike with drag-and-drop and tap-to-select, undo, web-worker solver hint; board scales to fill the window; HMAC-signed win leaderboard |
 | **Solitaire Leaderboard** | Win counts leaderboard |
+| **FreeCell** | Classic FreeCell solitaire with drag-and-drop and tap-to-select; board scales to fill the window; HMAC-signed win leaderboard |
+| **FreeCell Leaderboard** | Win counts leaderboard |
 | **Sudoku** | 9×9 puzzle with Easy / Medium / Hard difficulties; arrow-key navigation; conflict and related-cell highlighting; undo; win timer; HMAC-signed win leaderboard |
 | **Sudoku Leaderboard** | Win counts leaderboard |
-| **Wordle** | Six-guess word game with color-coded tile feedback and an on-screen keyboard; HMAC-signed win leaderboard |
+| **Wordle** | Six-guess word game with color-coded tile feedback and a responsive on-screen keyboard; HMAC-signed win leaderboard |
 | **Wordle Leaderboard** | Win counts and best-guess-count leaderboard |
 
 ### CLI
@@ -60,9 +62,10 @@ A Windows 95-inspired personal portfolio built with Next.js. It simulates a comp
 
 ## Features
 
-- **Window management** — drag, resize, minimize, maximize, and close; automatic z-order and focus tracking
-- **Mobile-responsive** — full-screen windows on viewports ≤ 768 px; game boards scale to fill available width
+- **Window management** — drag, resize, minimize, maximize, and close; automatic z-order and focus tracking; double-click a taskbar button to minimize the window
+- **Mobile-responsive** — full-screen windows on viewports ≤ 768 px; game boards scale to fill available width and height
 - **CRT monitor effect** — power-on/off animation with scanline overlay, toggled in Settings
+- **Mouse click sound** — optional audio feedback on every click, toggled in Settings; plays only on clean clicks (not drags or holds)
 - **HMAC-signed scores** — Minesweeper, Solitaire, Sudoku, and Wordle scores are signed server-side before Firestore writes, preventing spoofed submissions
 - **SSE photo streaming** — album data streamed as Server-Sent Events from `/api/photos`
 - **Emulated filesystem** — localStorage-backed virtual filesystem with path resolution (`.`, `..`, `~`)
@@ -157,6 +160,9 @@ Firebase services required: **Firestore**, **Realtime Database**, **Storage**.
 | `POST` | `/api/wordle/token` | Issue a short-lived HMAC token |
 | `GET` | `/api/wordle` | Win leaderboard, sorted by wins descending |
 | `PUT` | `/api/wordle` | Submit a verified win `{ username, guesses, token, secureToken }` |
+| `POST` | `/api/freecell/token` | Issue a short-lived HMAC token |
+| `GET` | `/api/freecell` | Win leaderboard, sorted by wins descending |
+| `PUT` | `/api/freecell` | Submit a verified win `{ username, token, secureToken }` |
 
 ### Compiler
 
@@ -183,7 +189,7 @@ Firebase services required: **Firestore**, **Realtime Database**, **Storage**.
 | `DELETE` | `/api/admin/[collection]/[docId]` | Delete a document |
 | `POST` | `/api/admin/albums/scrape` | Scrape a Google Photos album URL and return metadata |
 
-Editable collections: `minesweeper`, `albums`, `solitaire`, `sudoku`, `museum_cameras`, `museum_computers`, `museum_consoles`.
+Editable collections: `minesweeper`, `albums`, `solitaire`, `freecell`, `sudoku`, `museum_cameras`, `museum_computers`, `museum_consoles`.
 
 ---
 
@@ -195,6 +201,7 @@ app/
     admin/                #   CRUD + auth + album scraper
     minesweeper/          #   Score token + leaderboard
     solitaire/            #   Score token + leaderboard
+    freecell/             #   Score token + leaderboard
     sudoku/               #   Score token + leaderboard
     wordle/               #   Score token + leaderboard
     compile/              #   JDoodle compiler proxy
@@ -206,7 +213,7 @@ app/
                           # minesweeper/, solitaire/, Vim.tsx
   context/
     WindowManagerContext.tsx   # Three fine-grained contexts
-    SettingsContext.tsx        # CRT toggle, persisted to localStorage
+    SettingsContext.tsx        # CRT toggle + click sound toggle, persisted to localStorage
   hooks/
     useWindowManager.ts
     useWindowState.ts
