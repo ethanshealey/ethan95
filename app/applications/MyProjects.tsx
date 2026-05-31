@@ -10,6 +10,7 @@ interface MyProjectsProps {
 }
 
 const items: FileItem[] = [
+  { name: 'Recipes', icon: '/static/images/projects/recipes.png', type: 'folder', modified: '3/21/2026', onOpen: () => window.open('https://recipes.ethanshealey.com') },
 ];
 
 export default function MyProjects({ windowId, focusWindow }: MyProjectsProps) {
