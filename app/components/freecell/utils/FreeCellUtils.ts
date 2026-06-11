@@ -163,6 +163,41 @@ export function isGameWon(state: GameState): boolean {
 }
 
 /**
+ * Check if the game can be auto-completed: repeatedly sending every free cell
+ * and tableau-top card to its foundation, with no other moves, empties the board.
+ */
+export function isAutoCompletable(state: GameState): boolean {
+  const tableau = state.tableau.map(col => [...col]);
+  const freeCells = [...state.freeCells];
+  const foundations = state.foundations.map(f => [...f]);
+
+  let moved = true;
+  while (moved) {
+    moved = false;
+
+    for (let i = 0; i < freeCells.length; i++) {
+      const card = freeCells[i];
+      if (card && canPlaceOnFoundation(card, foundations[getFoundationIndex(card.suit)])) {
+        foundations[getFoundationIndex(card.suit)].push(card);
+        freeCells[i] = null;
+        moved = true;
+      }
+    }
+
+    for (const col of tableau) {
+      const card = col[col.length - 1];
+      if (card && canPlaceOnFoundation(card, foundations[getFoundationIndex(card.suit)])) {
+        foundations[getFoundationIndex(card.suit)].push(card);
+        col.pop();
+        moved = true;
+      }
+    }
+  }
+
+  return foundations.every(pile => pile.length === 13);
+}
+
+/**
  * Try to auto-move a card to foundation if it matches.
  */
 export function tryAutoMove(state: GameState, card: Card, source: Source): GameState | null {

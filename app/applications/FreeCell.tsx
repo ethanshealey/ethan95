@@ -9,7 +9,7 @@ import {
   SUIT_ORDER, SUIT_SYMBOLS, CARD_W, CARD_H, PADDING,
   BOARD_W, BOARD_H, TOP_Y, TABLEAU_Y, FACE_UP_STEP,
   dealGame, canPlaceOnTableau, canPlaceOnFoundation, getFoundationIndex,
-  applyMove, applyMultiMove, isValidSequence, isGameWon, tableauColX, tableauCardY, freeCellX, foundationX,
+  applyMove, applyMultiMove, isValidSequence, isGameWon, isAutoCompletable, tableauColX, tableauCardY, freeCellX, foundationX,
 } from '../components/freecell/utils/FreeCellUtils';
 
 interface FreeCellProps {
@@ -65,6 +65,19 @@ export default function FreeCell({ windowId, focusWindow }: FreeCellProps) {
 
   const newGame = useCallback(() => {
     setGame(dealGame());
+    setDrag(null);
+    setSelected(null);
+  }, []);
+
+  const skipToDone = useCallback(() => {
+    setGame(g => ({
+      ...g,
+      tableau: g.tableau.map(() => []),
+      freeCells: [null, null, null, null],
+      foundations: SUIT_ORDER.map(suit =>
+        Array.from({ length: 13 }, (_, i) => ({ suit, rank: i + 1, faceUp: true }))
+      ),
+    }));
     setDrag(null);
     setSelected(null);
   }, []);
@@ -324,6 +337,9 @@ export default function FreeCell({ windowId, focusWindow }: FreeCellProps) {
             </MenuList>
           )}
         </div>
+        {!won && isAutoCompletable(game) && (
+          <Button variant='menu' size='sm' onClick={skipToDone}>Skip</Button>
+        )}
       </Toolbar>
 
       <div

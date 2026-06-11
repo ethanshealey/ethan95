@@ -9,9 +9,10 @@ interface WordleWinnerProps {
   focusWindow: (id: string) => void;
   won?: boolean;
   guesses?: number;
+  hardMode?: boolean;
 }
 
-export default function WordleWinner({ windowId, focusWindow, won, guesses }: WordleWinnerProps) {
+export default function WordleWinner({ windowId, focusWindow, won, guesses, hardMode }: WordleWinnerProps) {
   const { closeWindow } = useWindowManager();
   const [name, setName]           = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -43,7 +44,7 @@ export default function WordleWinner({ windowId, focusWindow, won, guesses }: Wo
     await fetch('/api/wordle', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: name, guesses, token, secureToken }),
+      body: JSON.stringify({ username: name, guesses, hardMode, token, secureToken }),
     });
 
     setSubmitted(true);

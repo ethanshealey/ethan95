@@ -174,7 +174,7 @@ export default function Wordle({ windowId, focusWindow }: WordleProps) {
     if (gameStatus === 'won' && wonGuesses !== null && !wonHandledRef.current) {
       wonHandledRef.current = true;
       const t = setTimeout(
-        () => openWindow('wordle-winner', { props: { won: true, guesses: wonGuesses } }),
+        () => openWindow('wordle-winner', { props: { won: true, guesses: wonGuesses, hardMode } }),
         600,
       );
       return () => clearTimeout(t);
@@ -182,7 +182,7 @@ export default function Wordle({ windowId, focusWindow }: WordleProps) {
     if (gameStatus === 'lost') {
       showMessage(`The word was ${answer}`, 4000);
     }
-  }, [gameStatus, wonGuesses, answer, showMessage, openWindow]);
+  }, [gameStatus, wonGuesses, answer, hardMode, showMessage, openWindow]);
 
   const triggerShake = useCallback((row: number) => {
     setShakeRow(row);

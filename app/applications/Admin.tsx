@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Frame, Button, TextInput, SelectNative } from 'react95';
+import { Frame, Button, TextInput, SelectNative, Checkbox } from 'react95';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -14,7 +14,7 @@ interface AdminProps {
 type DocData = Record<string, unknown>;
 
 const COLLECTIONS = [
-  'minesweeper', 'albums', 'solitaire', 'freecell', 'sudoku',
+  'minesweeper', 'albums', 'solitaire', 'freecell', 'sudoku', 'wordle',
   'museum_cameras', 'museum_computers', 'museum_consoles',
 ] as const;
 type Collection = (typeof COLLECTIONS)[number];
@@ -29,6 +29,10 @@ const COLLECTION_OPTIONS = COLLECTIONS.map((col) => ({
 
 const MUSEUM_COLLECTIONS = new Set<Collection>(['museum_cameras', 'museum_computers', 'museum_consoles']);
 const MUSEUM_DEFAULT_FIELDS = ['name', 'image', 'year', 'description'] as const;
+
+const WORDLE_BOOLEAN_FIELDS = ['isHardMode', 'isBot'] as const;
+const WORDLE_NUMBER_FIELDS = ['wins', 'bestGuesses', 'lastWin'] as const;
+const WORDLE_DEFAULT_FIELDS = ['username', 'wins', 'bestGuesses', 'lastWin', 'isHardMode', 'isBot'] as const;
 
 // Fields shown read-only (not editable)
 const READONLY_FIELDS = new Set(['id', 'createdAt', 'create_ts']);
@@ -50,6 +54,18 @@ function getColumns(docs: DocData[]): string[] {
 function coerceMuseumFields(fields: Record<string, string>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...fields };
   if (typeof out.year === 'string' && out.year !== '') out.year = Number(out.year);
+  return out;
+}
+
+/** Coerce wordle field types before writing to Firestore. */
+function coerceWordleFields(fields: Record<string, string>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...fields };
+  for (const key of WORDLE_NUMBER_FIELDS) {
+    if (typeof out[key] === 'string' && out[key] !== '') out[key] = Number(out[key]);
+  }
+  for (const key of WORDLE_BOOLEAN_FIELDS) {
+    if (key in out) out[key] = out[key] === 'true';
+  }
   return out;
 }
 
@@ -151,11 +167,13 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
     let defaultFields: string[];
     if (MUSEUM_COLLECTIONS.has(activeCollection)) {
       defaultFields = [...MUSEUM_DEFAULT_FIELDS];
+    } else if (activeCollection === 'wordle') {
+      defaultFields = [...WORDLE_DEFAULT_FIELDS];
     } else {
       const autoFields = activeCollection === 'albums' ? new Set([...READONLY_FIELDS, 'index']) : READONLY_FIELDS;
       defaultFields = getColumns(docs).filter((k) => !autoFields.has(k));
     }
-    setEditFields(Object.fromEntries(defaultFields.map((k) => [k, ''])));
+    setEditFields(Object.fromEntries(defaultFields.map((k) => [k, WORDLE_BOOLEAN_FIELDS.includes(k as typeof WORDLE_BOOLEAN_FIELDS[number]) ? 'false' : ''])));
     setEditingDoc(null);
     setIsAdding(true);
     setScrapeUrl('');
@@ -218,6 +236,8 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
         }
       } else if (MUSEUM_COLLECTIONS.has(activeCollection)) {
         body = coerceMuseumFields(editFields);
+      } else if (activeCollection === 'wordle') {
+        body = coerceWordleFields(editFields);
       } else {
         body = { ...editFields };
       }
@@ -243,6 +263,11 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
       if (READONLY_FIELDS.has(k)) continue;
       fields[k] = Array.isArray(v) ? JSON.stringify(v) : String(v ?? '');
     }
+    if (activeCollection === 'wordle') {
+      for (const k of WORDLE_BOOLEAN_FIELDS) {
+        if (!(k in fields)) fields[k] = 'false';
+      }
+    }
     setIsAdding(false);
     setEditingDoc(docItem);
     setEditFields(fields);
@@ -255,6 +280,8 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
     try {
       const payload: Record<string, unknown> = MUSEUM_COLLECTIONS.has(activeCollection)
         ? coerceMuseumFields(editFields)
+        : activeCollection === 'wordle'
+        ? coerceWordleFields(editFields)
         : { ...editFields };
       const res = await fetch(`/api/admin/${activeCollection}/${editingDoc.id}`, {
         method: 'PATCH',
@@ -424,7 +451,14 @@ export default function Admin({ windowId, focusWindow }: AdminProps) {
             {Object.entries(editFields).map(([key, val]) => (
               <React.Fragment key={key}>
                 <span style={{ fontSize: '11px' }}>{key}:</span>
-                {key === 'image' && isMuseum ? (
+                {activeCollection === 'wordle' && (WORDLE_BOOLEAN_FIELDS as readonly string[]).includes(key) ? (
+                  <Checkbox
+                    checked={val === 'true'}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setEditFields((prev) => ({ ...prev, [key]: e.target.checked ? 'true' : 'false' }))
+                    }
+                  />
+                ) : key === 'image' && isMuseum ? (
                   <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                     <TextInput
                       value={val}
